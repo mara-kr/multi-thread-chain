@@ -1,2 +1,4 @@
 # multi-thread-chain
-Research project for 18742
+Work to extend [Chain](https://github.com/CMUAbstract/libchain) to work in a multi-threaded context
+
+Research project for Carnegie Mellon's 18742
