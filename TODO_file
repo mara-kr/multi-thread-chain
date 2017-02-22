@@ -8,7 +8,7 @@ List of TODO's for Milestone 0:
 	maximum number of concurrent instances, so channels can be statically allocated at
 	compile time.
 
--Easy follow up to last TODO is to write a script that handles the channel definitions 
+-Easy follow up to last TODO is to write a script that handles the channel definitions, or use REPEAT macro
 
 -Add thread number field to context variable so tasks know which channels to read
  from/write to.
