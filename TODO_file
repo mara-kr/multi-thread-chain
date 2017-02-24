@@ -1,8 +1,10 @@
-List of TODO's for Milestone 0: 
+List of TODO's for Milestone 0:
+
+-Infra: submodules working, update submodule libchain
 
 -Define Scheduler "reach"
 	What exactly will the scheduler task be responsible for?
-	
+
 -Nail down exactly what is defined at compile time
 	So far, programmer specifies which sequences of tasks can be run concurrently and the
 	maximum number of concurrent instances, so channels can be statically allocated at
@@ -14,13 +16,13 @@ List of TODO's for Milestone 0:
  from/write to.
 
 -Add scheduler task and show that multicast In functionality works, then hand control to
- the transitionTo() argument task as per usual. 
+ the transitionTo() argument task as per usual.
 
 Long term TODO's:
 
 -Figure out synchronization primitives
 -Make tasks deschedule themselves from scheduler queue
--Get tasks to wait until "feeder" tasks have provided reasonable output. 
+-Get tasks to wait until "feeder" tasks have provided reasonable output.
 
 
-   
+
