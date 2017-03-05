@@ -126,13 +126,21 @@ void transition_to(task_t *next_task)
     //
     //       Probably need to write a custom entry point in asm, and
     //       use it instead of the C runtime one.
-
-    next_ctx = curctx->next_ctx;
+		
+		// Sorry, leaving dead code here... 
+   /* next_ctx = curctx->next_ctx;
     next_ctx->task = next_task;
     next_ctx->time = curctx->time + 1;
 
     next_ctx->next_ctx = curctx;
     curctx = next_ctx;
+	 */
+		
+		curctx->task = next_task; 
+		next_ctx->time = curctx->time + 1; 
+
+		CHAN_OUT1(context_t, context, curctx, SELF_OUT_CH(task_scheduler)); 
+
 
     task_prologue();
 
