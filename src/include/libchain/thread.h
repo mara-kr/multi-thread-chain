@@ -15,11 +15,17 @@ typedef struct thread_t {
     context_t context;
 }
 
+/** @brief Initialize scheduler */
+void thread_init();
+
 /** @brief TODO
  */
 void thread_end();
 
 /** @brief TODO */
-int thread_create();
+int thread_create(task_t *new_task);
+
+/** @brief TODO */
+thread_t * volatile get_current_thread();
 
 #endif
