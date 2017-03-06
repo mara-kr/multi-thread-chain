@@ -2,6 +2,7 @@ LIB = libchain
 
 OBJECTS = \
 	chain.o \
+	thread.o
 
 DEPS += \
 	libmsp \
