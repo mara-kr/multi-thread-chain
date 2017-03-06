@@ -23,7 +23,8 @@ typedef enum {
     CHAN_TYPE_T2T,
     CHAN_TYPE_SELF,
     CHAN_TYPE_MULTICAST,
-    CHAN_TYPE_CALL,
+    CHAN_TYPE_GLOBAL,
+		CHAN_TYPE_CALL,
     CHAN_TYPE_RETURN,
 } chan_type_t;
 
@@ -41,6 +42,11 @@ typedef struct _chan_meta_t {
 typedef struct _var_meta_t {
     chain_time_t timestamp;
 } var_meta_t;
+
+typedef struct _global_field_meta_t{
+		//A placeholder for now... 
+		unsigned test; 
+} global_field_meta_t; 
 
 typedef struct _self_field_meta_t {
     // Single word (two bytes) value that contains
@@ -91,6 +97,12 @@ typedef struct {
         self_field_meta_t meta; \
         VAR_TYPE(type) var[2]; \
     }
+
+#define GLOBAL_FIELD_TYPE(type) \
+		struct { \
+				glob_field_meta_t meta; \
+				VAR_TYPE(type) var; \
+		}
 
 #define CH_TYPE(src, dest, type) \
     struct _ch_type_ ## src ## _ ## dest ## _ ## type { \
@@ -227,6 +239,11 @@ void chan_out(const char *field_name, const void *value,
 #define SELF_FIELDS_INITIALIZER_INNER(type) FIELD_INIT_ ## type
 #define SELF_FIELDS_INITIALIZER(type) SELF_FIELDS_INITIALIZER_INNER(type)
 
+/** @brief sets up a channel with threads*/
+#define CHANNEL_WT(src, dest, id, type) \
+		__nv CH_TYPE(src, dest, type) _ch_ ## src ## _ ## dest ## _ ## id = \
+				{ { CHAN_TYPE_T2T, { #src, #dest } } }
+
 #define CHANNEL(src, dest, type) \
     __nv CH_TYPE(src, dest, type) _ch_ ## src ## _ ## dest = \
         { { CHAN_TYPE_T2T, { #src, #dest } } }
@@ -235,6 +252,9 @@ void chan_out(const char *field_name, const void *value,
     __nv CH_TYPE(task, task, type) _ch_ ## task ## _ ## task = \
         { { CHAN_TYPE_SELF, { #task, #task } }, SELF_FIELDS_INITIALIZER(type) }
 
+#define GLOBAL_CHANNEL(task, type) \
+		__nv CH_TYPE(task, glob, type) _ch_ ## task ## _glob = \
+				{ { CHAN_TYPE_GLOB, { :
 /** @brief Declare a channel for passing arguments to a callable task
  *  @details Callers would output values into this channels before
  *           transitioning to the callable task.
@@ -274,6 +294,8 @@ void chan_out(const char *field_name, const void *value,
 #define MULTICAST_CHANNEL(type, name, src, dest, ...) \
     __nv CH_TYPE(src, name, type) _ch_mc_ ## src ## _ ## name = \
         { { CHAN_TYPE_MULTICAST, { #src, "mc:" #name } } }
+
+#define CH_TH(src,dest, thr) (&_ch_ ## src ## _ ## dest ## _ ## thr)
 
 #define CH(src, dest) (&_ch_ ## src ## _ ## dest)
 #define SELF_CH(tsk)  CH(tsk, tsk)

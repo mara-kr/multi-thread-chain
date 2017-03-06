@@ -8,6 +8,9 @@
 
 #include "chain.h"
 
+__nv extern thread_t * volatile cur_thread; 
+
+
 typedef struct thread_t {
     // TODO - overflow is possible!
     unsigned thread_id;
@@ -33,5 +36,8 @@ int thread_create(task_t *new_task);
  *  @return Pointer to the struct describing the current thread
  */
 thread_t *get_current_thread();
+
+/** @brief returns a pointer to the current thread */ 
+uint8_t getThreadPtr(); 
 
 #endif

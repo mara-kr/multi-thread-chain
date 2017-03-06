@@ -19,14 +19,14 @@ typedef struct _void_type_t void_type_t;
 __nv chain_time_t volatile curtime = 0;
 
 /* To update the context, fill-in the unused one and flip the pointer to it */
-__nv context_t context_1 = {0};
+/*__nv context_t context_1 = {0};
 __nv context_t context_0 = {
     .task = TASK_REF(_entry_task),
     .time = 0,
     .next_ctx = &context_1,
 };
-
-__nv context_t * volatile curctx = &context_0;
+*/
+__nv context_t * volatile curctx = get_cur_ctx();
 
 // for internal instrumentation purposes
 __nv volatile unsigned _numBoots = 0;
@@ -126,13 +126,21 @@ void transition_to(task_t *next_task)
     //
     //       Probably need to write a custom entry point in asm, and
     //       use it instead of the C runtime one.
-
-    next_ctx = curctx->next_ctx;
+		
+		// Sorry, leaving dead code here... 
+   /* next_ctx = curctx->next_ctx;
     next_ctx->task = next_task;
     next_ctx->time = curctx->time + 1;
 
     next_ctx->next_ctx = curctx;
     curctx = next_ctx;
+	 */
+		
+		curctx->task = next_task; 
+		next_ctx->time = curctx->time + 1; 
+
+		CHAN_OUT1(context_t, context, curctx, SELF_OUT_CH(task_scheduler)); 
+
 
     task_prologue();
 
@@ -171,6 +179,7 @@ void *chan_in(const char *field_name, size_t var_size, int count, ...)
 
     var_meta_t *var;
     var_meta_t *latest_var = NULL;
+		uint8_t curthid = get_thread_id(); 
 
     LIBCHAIN_PRINTF("[%u] %s: in: '%s':", curctx->time,
                     curctx->task->name, field_name);
