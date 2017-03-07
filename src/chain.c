@@ -9,6 +9,7 @@
 #endif
 
 #include "chain.h"
+#include "thread.h" 
 
 /* Dummy types for offset calculations */
 struct _void_type_t {
@@ -26,7 +27,7 @@ __nv context_t context_0 = {
     .next_ctx = &context_1,
 };
 */
-__nv context_t * volatile curctx = get_cur_ctx();
+__nv context_t * volatile curctx ;
 
 // for internal instrumentation purposes
 __nv volatile unsigned _numBoots = 0;
@@ -128,19 +129,19 @@ void transition_to(task_t *next_task)
     //       use it instead of the C runtime one.
 		
 		// Sorry, leaving dead code here... 
-   /* next_ctx = curctx->next_ctx;
+    next_ctx = curctx->next_ctx;
     next_ctx->task = next_task;
     next_ctx->time = curctx->time + 1;
 
     next_ctx->next_ctx = curctx;
     curctx = next_ctx;
-	 */
-		
-		curctx->task = next_task; 
-		next_ctx->time = curctx->time + 1; 
+	 
+		//This code will get used when task_scheduler is implemented fully
+		/*curctx->task = next_task; 
+			next_ctx->time = curctx->time + 1; 
 
-		CHAN_OUT1(context_t, context, curctx, SELF_OUT_CH(task_scheduler)); 
-
+			CHAN_OUT1(context_t, context, curctx, SELF_OUT_CH(task_scheduler)); 
+		*/
 
     task_prologue();
 
@@ -179,8 +180,9 @@ void *chan_in(const char *field_name, size_t var_size, int count, ...)
 
     var_meta_t *var;
     var_meta_t *latest_var = NULL;
-		uint8_t curthid = get_thread_id(); 
-
+		//May be able to omit this code... as long as CH_TH's are used, it'll work out
+		thread_t * curthread = get_current_thread(); 
+		unsigned curthid = curthread->thread_id; 
     LIBCHAIN_PRINTF("[%u] %s: in: '%s':", curctx->time,
                     curctx->task->name, field_name);
 

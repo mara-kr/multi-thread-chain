@@ -252,6 +252,9 @@ void chan_out(const char *field_name, const void *value,
     __nv CH_TYPE(task, task, type) _ch_ ## task ## _ ## task = \
         { { CHAN_TYPE_SELF, { #task, #task } }, SELF_FIELDS_INITIALIZER(type) }
 
+#define SELF_CHANNEL_DEC(task, type) \
+		CH_TYPE(task, task, type) _ch_ ## task ## _ ## task 
+
 #define GLOBAL_CHANNEL(task, type) \
 		__nv CH_TYPE(task, glob, type) _ch_ ## task ## _glob = \
 				{ { CHAN_TYPE_GLOB, { :

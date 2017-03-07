@@ -2,10 +2,19 @@
 /** @file thread.c
  *  @brief Implementation of multi-threading functions
  */
+#include <stdarg.h>
+#include <string.h>
+
+#ifndef LIBCHAIN_ENABLE_DIAGNOSTICS
+#define LIBCHAIN_PRINTF(...)
+#else
+#include <stdio.h>
+#define LIBCHAIN_PRINTF printf
+#endif
 
 #include "chain.h"
 #include "thread.h"
-
+/*
 #define MAX_NUM_THREADS 4
 
 typedef struct thread_state_t {
@@ -18,7 +27,7 @@ struct thread_array {
     SELF_CHAN_FIELD(unsigned, current);
     SELF_CHAN_FIELD(unsigned, num_threads);
 };
-
+*/
 #define FIELD_INIT_thread_array {\
     SELF_FIELD_ARRAY_INITIALIZER(MAX_NUM_THREADS),\
     SELF_FIELD_INITIALIZER,\
@@ -26,14 +35,34 @@ struct thread_array {
 }
 
 TASK(1, scheduler_task)
+SELF_CHANNEL(scheduler_task, thread_array); 
 
 // Empty task so we can create a self-channel
 void scheduler_task() {
-    return;
+		LIBCHAIN_PRINTF("Inside scheduler task!! \r\n"); 	
+		return;
 }
 
+/** @brief scheduler initialize the thread_array
+*/
+void scheduler_init(){
+		thread_state_t *thread_states = CHAN_IN1(thread_state_t, threads, 
+						SELF_IN_CH(scheduler_task)); 
+		//TODO add check for optimization
+		for(unsigned i = 0; i < MAX_NUM_THREADS; i++){
+				thread_states[i].active = 0; 
+		}
+		//Set the current thread to index 0
+		unsigned curthread_index = 0; 
+		CHAN_OUT1(unsigned, current, curthread_index, SELF_OUT_CH(scheduler_task)); 
+		//Set the number of threads to 1
+		//TODO make this not necessarily 1!
+		unsigned num_threads = 1; 
+		CHAN_OUT1(unsigned, num_threads, num_threads, SELF_OUT_CH(scheduler_task)); 
+		LIBCHAIN_PRINTF("Inside scheduler init! \r\n"); 
+		return; 
+}
 
-SELF_CHANNEL(scheduler_task, thread_array);
 
 void thread_init() {
     thread_state_t *threads = *CHAN_IN1(thread_state_t *, threads,
