@@ -114,13 +114,14 @@ void scheduler_init(){
 
 
 void thread_init() {
-    thread_state_t *threads = *CHAN_IN1(thread_state_t *, threads,
-            SELF_IN_CH(scheduler_task));
+    thread_state_t threads[MAX_NUM_THREADS];
     threads[0].active = 1;
 
     for (unsigned i = 1; i < MAX_NUM_THREADS; i++) {
         threads[i].active = 0;
     }
+    CHAN_OUT1(thread_state_t *, threads, threads,
+            SELF_OUT_CH(scheduler_task));
 }
 
 void thread_end() {

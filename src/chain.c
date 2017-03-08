@@ -27,7 +27,7 @@ __nv context_t context_0 = {
     .next_ctx = &context_1,
 };
 
-__nv context_t * volatile curctx ;
+__nv context_t * volatile curctx = &context_0;
 
 // for internal instrumentation purposes
 __nv volatile unsigned _numBoots = 0;
@@ -183,8 +183,8 @@ void *chan_in(const char *field_name, size_t var_size, int count, ...)
 		//May be able to omit this code... as long as CH_TH's are used, it'll work out
 		thread_t * curthread = get_current_thread();
 		unsigned curthid = curthread->thread_id;
-    LIBCHAIN_PRINTF("[%u] %s: in: '%s':", curctx->time,
-                    curctx->task->name, field_name);
+    //LIBCHAIN_PRINTF("[%u] %s: in: '%s':", curctx->time,
+    //                curctx->task->name, field_name);
 
     va_start(ap, count);
 
@@ -221,10 +221,12 @@ void *chan_in(const char *field_name, size_t var_size, int count, ...)
                 break;
         }
 
+        /*
         LIBCHAIN_PRINTF(" {%u} %s->%s:%c c%04x:off%u:v%04x [%u],", i,
                chan_meta->diag.source_name, chan_meta->diag.dest_name,
                curidx, (uint16_t)chan, field_offset,
                (uint16_t)var, var->timestamp);
+               */
 
         if (var->timestamp > latest_update) {
             latest_update = var->timestamp;
@@ -236,14 +238,16 @@ void *chan_in(const char *field_name, size_t var_size, int count, ...)
     }
     va_end(ap);
 
-    LIBCHAIN_PRINTF(": {latest %u}: ", latest_chan_idx);
+    //LIBCHAIN_PRINTF(": {latest %u}: ", latest_chan_idx);
 
     uint8_t *value = (uint8_t *)latest_var + offsetof(VAR_TYPE(void_type_t), value);
 
 #ifdef LIBCHAIN_ENABLE_DIAGNOSTICS
+    /*
     for (int i = 0; i < var_size - sizeof(var_meta_t); ++i)
         LIBCHAIN_PRINTF("%02x ", value[i]);
     LIBCHAIN_PRINTF("\r\n");
+    */
 #endif
 
     // TODO: No two timestamps compared above can be equal.
@@ -324,6 +328,7 @@ void chan_out(const char *field_name, const void *value,
         }
 
 #ifdef LIBCHAIN_ENABLE_DIAGNOSTICS
+        /*
         LIBCHAIN_PRINTF("[%u] %s: out: '%s': %s -> %s:%c c%04x:off%u:v%04x: ",
                curctx->time, curctx->task->name, field_name,
                chan_meta->diag.source_name, chan_meta->diag.dest_name,
@@ -332,6 +337,7 @@ void chan_out(const char *field_name, const void *value,
         for (int i = 0; i < var_size - sizeof(var_meta_t); ++i)
             LIBCHAIN_PRINTF("%02x ", *((uint8_t *)value + i));
         LIBCHAIN_PRINTF("\r\n");
+        */
 #endif
 
         var->timestamp = curctx->time;
@@ -344,10 +350,8 @@ void chan_out(const char *field_name, const void *value,
 
 /** @brief Entry point upon reboot */
 int main() {
-    
-		_init();
-		LIBCHAIN_PRINTF("starting main checking task |  %x | \r\n", curctx->task->func); 
-		LIBCHAIN_PRINTF("Finished init \r\n"); 
+
+    _init();
     _numBoots++;
 
     // Resume execution at the last task that started but did not finish
@@ -358,7 +362,7 @@ int main() {
     // transition_to(curtask);
 
     task_prologue();
-		LIBCHAIN_PRINTF("Finished prologue checking task |  %x | \r\n", curctx->task->func); 
+    //LIBCHAIN_PRINTF("Finished prologue checking task |  %x | \r\n", curctx->task->func);
 
     __asm__ volatile ( // volatile because output operands unused by C
         "br %[nt]\n"
