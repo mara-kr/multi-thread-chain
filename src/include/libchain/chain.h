@@ -44,9 +44,9 @@ typedef struct _var_meta_t {
 } var_meta_t;
 
 typedef struct _global_field_meta_t{
-		//A placeholder for now... 
-		unsigned test; 
-} global_field_meta_t; 
+		//A placeholder for now...
+		unsigned test;
+} global_field_meta_t;
 
 typedef struct _self_field_meta_t {
     // Single word (two bytes) value that contains
@@ -253,7 +253,7 @@ void chan_out(const char *field_name, const void *value,
         { { CHAN_TYPE_SELF, { #task, #task } }, SELF_FIELDS_INITIALIZER(type) }
 
 #define SELF_CHANNEL_DEC(task, type) \
-		CH_TYPE(task, task, type) _ch_ ## task ## _ ## task 
+		CH_TYPE(task, task, type) _ch_ ## task ## _ ## task
 
 #define GLOBAL_CHANNEL(task, type) \
 		__nv CH_TYPE(task, glob, type) _ch_ ## task ## _glob = \

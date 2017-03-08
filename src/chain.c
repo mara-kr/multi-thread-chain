@@ -180,15 +180,16 @@ void *chan_in(const char *field_name, size_t var_size, int count, ...)
 
     var_meta_t *var;
     var_meta_t *latest_var = NULL;
-		//May be able to omit this code... as long as CH_TH's are used, it'll work out
-		thread_t * curthread = get_current_thread();
-		unsigned curthid = curthread->thread_id;
+    //May be able to omit this code... as long as CH_TH's are used, it'll work out
+    //thread_t * curthread = get_current_thread();
+    //unsigned curthid = curthread->thread_id;
     //LIBCHAIN_PRINTF("[%u] %s: in: '%s':", curctx->time,
     //                curctx->task->name, field_name);
 
     va_start(ap, count);
 
     for (i = 0; i < count; ++i) {
+        LIBCHAIN_PRINTF("chanIn: i = %u, count = %u\r\n", i, count);
         uint8_t *chan = va_arg(ap, uint8_t *);
         size_t field_offset = va_arg(ap, unsigned);
 
