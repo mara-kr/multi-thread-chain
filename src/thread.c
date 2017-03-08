@@ -52,7 +52,7 @@ void write_to_scheduler(sch_chan_fields field, void * input){
 		case current: 
 			LIBCHAIN_PRINTF("Error- read only variable!\r\n"); 
 			break; 
-		case num_threads
+		case num_threads:
 			LIBCHAIN_PRINTF("Error- read only variable!\r\n"); 
 			break; 
 		default: 
@@ -68,7 +68,7 @@ void read_from_scheduler(sch_chan_fields field, void * output){
 			break; 
 		case current: 
 			*output = *CHAN_IN1(unsigned, current, 
-								SELF_IN_CH(scheduler_task); 
+								SELF_IN_CH(scheduler_task)); 
 			break; 
 		case num_threads: 
 			*output = *CHAN_IN1(unsigned, num_threads, 
