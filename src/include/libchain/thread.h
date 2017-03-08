@@ -8,12 +8,12 @@
 
 #include "chain.h"
 
-typedef enum sched_fields_{ 
+typedef enum sched_fields_{
 	threads,
 	thread,
-	current, 
+	current,
 	num_threads
-}sch_chan_fields ; 
+}sch_chan_fields ;
 
 typedef struct thread_t {
     // TODO - overflow is possible!
@@ -21,11 +21,13 @@ typedef struct thread_t {
     context_t context;
 } thread_t;
 
-__nv extern thread_t * volatile cur_thread; 
+__nv extern thread_t * volatile cur_thread;
 
-//extern SELF_CHANNEL_DEC(scheduler_task,thread_array); 
+//extern SELF_CHANNEL_DEC(scheduler_task,thread_array);
 //extern struct _ch_type_scheduler_task_scheduler_task_thread_array
-//							_ch_scheduler_task_scheduler_task; 
+//							_ch_scheduler_task_scheduler_task;
+
+#define THREAD_CREATE(task) thread_create(TASK_REF(task))
 
 /** @brief Initialize scheduler constructs at first boot */
 void thread_init();
@@ -47,10 +49,10 @@ int thread_create(task_t *new_task);
  */
 thread_t *get_current_thread();
 
-/** @brief returns a pointer to the current thread */ 
-uint8_t getThreadPtr(); 
+/** @brief returns a pointer to the current thread */
+uint8_t getThreadPtr();
 
 void write_to_scheduler(sch_chan_fields field, void *input);
 
-void read_from_scheduler(sch_chan_fields field, void *output); 
+void read_from_scheduler(sch_chan_fields field, void *output);
 #endif
