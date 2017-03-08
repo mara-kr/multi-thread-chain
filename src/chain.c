@@ -9,7 +9,7 @@
 #endif
 
 #include "chain.h"
-#include "thread.h" 
+#include "thread.h"
 
 /* Dummy types for offset calculations */
 struct _void_type_t {
@@ -127,20 +127,20 @@ void transition_to(task_t *next_task)
     //
     //       Probably need to write a custom entry point in asm, and
     //       use it instead of the C runtime one.
-		
-		// Sorry, leaving dead code here... 
+
+		// Sorry, leaving dead code here...
     next_ctx = curctx->next_ctx;
     next_ctx->task = next_task;
     next_ctx->time = curctx->time + 1;
 
     next_ctx->next_ctx = curctx;
     curctx = next_ctx;
-	 
-		//This code will get used when task_scheduler is implemented fully
-		/*curctx->task = next_task; 
-			next_ctx->time = curctx->time + 1; 
 
-			CHAN_OUT1(context_t, context, curctx, SELF_OUT_CH(task_scheduler)); 
+		//This code will get used when task_scheduler is implemented fully
+		/*curctx->task = next_task;
+			next_ctx->time = curctx->time + 1;
+
+			CHAN_OUT1(context_t, context, curctx, SELF_OUT_CH(task_scheduler));
 		*/
 
     task_prologue();
@@ -181,8 +181,8 @@ void *chan_in(const char *field_name, size_t var_size, int count, ...)
     var_meta_t *var;
     var_meta_t *latest_var = NULL;
 		//May be able to omit this code... as long as CH_TH's are used, it'll work out
-		thread_t * curthread = get_current_thread(); 
-		unsigned curthid = curthread->thread_id; 
+		thread_t * curthread = get_current_thread();
+		unsigned curthid = curthread->thread_id;
     LIBCHAIN_PRINTF("[%u] %s: in: '%s':", curctx->time,
                     curctx->task->name, field_name);
 
@@ -208,7 +208,7 @@ void *chan_in(const char *field_name, size_t var_size, int count, ...)
                         offsetof(SELF_FIELD_TYPE(void_type_t), var) + var_offset);
 
 #ifdef LIBCHAIN_ENABLE_DIAGNOSTICS
-                curidx = '0' + self_field->curidx;
+                //curidx = '0' + self_field->curidx;
 #endif
                 break;
             }
@@ -216,9 +216,9 @@ void *chan_in(const char *field_name, size_t var_size, int count, ...)
                 var = (var_meta_t *)(field +
                         offsetof(FIELD_TYPE(void_type_t), var));
 #ifdef LIBCHAIN_ENABLE_DIAGNOSTICS
-                curidx = ' ';
-                break;
+                //curidx = ' ';
 #endif
+                break;
         }
 
         LIBCHAIN_PRINTF(" {%u} %s->%s:%c c%04x:off%u:v%04x [%u],", i,
@@ -310,7 +310,7 @@ void chan_out(const char *field_name, const void *value,
                 curtask->dirty_self_fields[curtask->num_dirty_self_fields++] = self_field;
 
 #ifdef LIBCHAIN_ENABLE_DIAGNOSTICS
-                curidx = '0' + next_self_chan_field_idx;
+                //curidx = '0' + next_self_chan_field_idx;
 #endif
                 break;
             }
@@ -318,9 +318,9 @@ void chan_out(const char *field_name, const void *value,
                 var = (var_meta_t *)(field +
                         offsetof(FIELD_TYPE(void_type_t), var));
 #ifdef LIBCHAIN_ENABLE_DIAGNOSTICS
-                curidx = ' ';
-                break;
+                //curidx = ' ';
 #endif
+                break;
         }
 
 #ifdef LIBCHAIN_ENABLE_DIAGNOSTICS
