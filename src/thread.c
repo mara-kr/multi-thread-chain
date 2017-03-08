@@ -35,7 +35,7 @@ struct thread_array {
     SELF_FIELD_INITIALIZER\
 }
 
-TASK(1, scheduler_task)
+TASK(5, scheduler_task)
 SELF_CHANNEL(scheduler_task, thread_array);
 
 //Dummy function wrapper to get the declarations to play nice

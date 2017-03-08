@@ -20,13 +20,13 @@ typedef struct _void_type_t void_type_t;
 __nv chain_time_t volatile curtime = 0;
 
 /* To update the context, fill-in the unused one and flip the pointer to it */
-/*__nv context_t context_1 = {0};
+__nv context_t context_1 = {0};
 __nv context_t context_0 = {
     .task = TASK_REF(_entry_task),
     .time = 0,
     .next_ctx = &context_1,
 };
-*/
+
 __nv context_t * volatile curctx ;
 
 // for internal instrumentation purposes
@@ -344,7 +344,9 @@ void chan_out(const char *field_name, const void *value,
 
 /** @brief Entry point upon reboot */
 int main() {
-    _init();
+    
+		_init();
+		LIBCHAIN_PRINTF("starting main checking task |  %x | \r\n", curctx->task->func); 
 		LIBCHAIN_PRINTF("Finished init \r\n"); 
     _numBoots++;
 
@@ -356,7 +358,7 @@ int main() {
     // transition_to(curtask);
 
     task_prologue();
-		LIBCHAIN_PRINTF("Finished prologue \r\n"); 
+		LIBCHAIN_PRINTF("Finished prologue checking task |  %x | \r\n", curctx->task->func); 
 
     __asm__ volatile ( // volatile because output operands unused by C
         "br %[nt]\n"
