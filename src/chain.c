@@ -345,7 +345,7 @@ void chan_out(const char *field_name, const void *value,
 /** @brief Entry point upon reboot */
 int main() {
     _init();
-
+		LIBCHAIN_PRINTF("Finished init \r\n"); 
     _numBoots++;
 
     // Resume execution at the last task that started but did not finish
@@ -356,6 +356,7 @@ int main() {
     // transition_to(curtask);
 
     task_prologue();
+		LIBCHAIN_PRINTF("Finished prologue \r\n"); 
 
     __asm__ volatile ( // volatile because output operands unused by C
         "br %[nt]\n"
