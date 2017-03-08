@@ -14,8 +14,9 @@
 
 #include "chain.h"
 #include "thread.h"
-/*
+
 #define MAX_NUM_THREADS 4
+
 
 typedef struct thread_state_t {
     thread_t thread;
@@ -27,7 +28,7 @@ struct thread_array {
     SELF_CHAN_FIELD(unsigned, current);
     SELF_CHAN_FIELD(unsigned, num_threads);
 };
-*/
+
 #define FIELD_INIT_thread_array {\
     SELF_FIELD_ARRAY_INITIALIZER(MAX_NUM_THREADS),\
     SELF_FIELD_INITIALIZER,\
@@ -36,6 +37,46 @@ struct thread_array {
 
 TASK(1, scheduler_task)
 SELF_CHANNEL(scheduler_task, thread_array); 
+
+//Dummy function wrapper to get the declarations to play nice
+void write_to_scheduler(sch_chan_fields field, void * input){
+	switch(field){
+		case threads: 
+			CHAN_OUT1(thread_state_t, threads,*((thread_state_t)input),
+								SELF_OUT_CH(scheduler_task)); 
+			break; 
+		case thread: 
+			CHAN_OUT1(thread_state_t, threads[0].thread, *((thread_t)input)
+								SELF_OUT_CH(scheduler_task)); 
+			break; 
+		case current: 
+			LIBCHAIN_PRINTF("Error- read only variable!\r\n"); 
+			break; 
+		case num_threads
+			LIBCHAIN_PRINTF("Error- read only variable!\r\n"); 
+			break; 
+		default: 
+			break; 
+	}
+}
+
+void read_from_scheduler(sch_chan_fields field, void * output){
+	switch(field){
+		case threads: 
+			output = CHAN_IN1(thread_state_t, threads, 
+							 SELF_IN_CH(scheduler_task));
+			break; 
+		case current: 
+			*output = *CHAN_IN1(unsigned, current, 
+								SELF_IN_CH(scheduler_task); 
+			break; 
+		case num_threads: 
+			*output = *CHAN_IN1(unsigned, num_threads, 
+								SELF_IN_CH(scheduler_task); 
+			break; 
+	}
+	return;
+}
 
 // Empty task so we can create a self-channel
 void scheduler_task() {

@@ -8,8 +8,12 @@
 
 #include "chain.h"
 
-#define MAX_NUM_THREADS 4
-
+typedef enum sched_fields_{ 
+	threads,
+	thread,
+	current, 
+	num_threads
+}sch_chan_fields ; 
 
 typedef struct thread_t {
     // TODO - overflow is possible!
@@ -17,20 +21,11 @@ typedef struct thread_t {
     context_t context;
 } thread_t;
 
-typedef struct thread_state_t {
-    thread_t thread;
-    unsigned active;
-} thread_state_t;
-
-struct thread_array {
-    SELF_CHAN_FIELD_ARRAY(thread_state_t, threads, MAX_NUM_THREADS);
-    SELF_CHAN_FIELD(unsigned, current);
-    SELF_CHAN_FIELD(unsigned, num_threads);
-};
-
 __nv extern thread_t * volatile cur_thread; 
 
-extern SELF_CHANNEL_DEC(scheduler_task,thread_array); 
+//extern SELF_CHANNEL_DEC(scheduler_task,thread_array); 
+//extern struct _ch_type_scheduler_task_scheduler_task_thread_array
+//							_ch_scheduler_task_scheduler_task; 
 
 /** @brief Initialize scheduler constructs at first boot */
 void thread_init();
@@ -55,5 +50,7 @@ thread_t *get_current_thread();
 /** @brief returns a pointer to the current thread */ 
 uint8_t getThreadPtr(); 
 
+void write_to_scheduler(sch_chan_fields field, void *input);
 
+void read_from_scheduler(sch_chan_fields field, void *output); 
 #endif
