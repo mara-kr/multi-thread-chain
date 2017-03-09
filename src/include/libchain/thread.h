@@ -8,6 +8,8 @@
 
 #include "chain.h"
 
+#define TRANSITION_TO_MT(task) transition_to_mt(TASK_REF(task))
+
 typedef enum sched_fields_{
 	threads,
 	thread,

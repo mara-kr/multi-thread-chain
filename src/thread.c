@@ -89,8 +89,31 @@ void read_from_scheduler(sch_chan_fields field, void * output){
 // Empty task so we can create a self-channel
 void scheduler_task() {
 		LIBCHAIN_PRINTF("Inside scheduler task!! \r\n");
+		thread_state_t *cur_thread = CHAN_IN1(thread_state_t, threads[0],
+																SELF_IN_CH(scheduler_task)); 
+		task_t *next_task = cur_thread->thread.context.task;
+
+		transition_to(next_task); 
 		return;
 }
+
+void transition_to_mt(task_t *next_task){
+	LIBCHAIN_PRINTF("transition_to_mt \r\n"); 
+	unsigned thread_id = get_current_thread; 
+	thread_t next_thr; 
+	context_t next_ctx; 
+	//Update context passed in 
+	next_ctx.task = next_task; 
+	next_ctx.time = curctx->time + 1; 
+	//Make thread_t to pass to scheduler
+	next_thr.thread_id = thread_id; 
+	next_thr.context = next_ctx; 	
+	//Write thread out to scheduler
+	write_to_scheduler(thread, &next_thr);
+	//Transition to scheduler
+	TRANSITION_TO(scheduler_task); 
+}
+
 
 /** @brief scheduler initialize the thread_array
 */

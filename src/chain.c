@@ -127,7 +127,7 @@ void transition_to(task_t *next_task)
     //
     //       Probably need to write a custom entry point in asm, and
     //       use it instead of the C runtime one.
-
+		LIBCHAIN_PRINTF("transition_to \r\n"); 
 		// Sorry, leaving dead code here...
     next_ctx = curctx->next_ctx;
     next_ctx->task = next_task;
@@ -136,13 +136,7 @@ void transition_to(task_t *next_task)
     next_ctx->next_ctx = curctx;
     curctx = next_ctx;
 
-		//This code will get used when task_scheduler is implemented fully
-		/*curctx->task = next_task;
-			next_ctx->time = curctx->time + 1;
-
-			CHAN_OUT1(context_t, context, curctx, SELF_OUT_CH(task_scheduler));
-		*/
-
+		
     task_prologue();
 
     __asm__ volatile ( // volatile because output operands unused by C

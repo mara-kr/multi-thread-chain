@@ -104,8 +104,8 @@ typedef struct {
 				VAR_TYPE(type) var; \
 		}
 
-#define CH_TYPE(src, dest, type) \
-    struct _ch_type_ ## src ## _ ## dest ## _ ## type { \
+#define CH_TYPE(src, dest, type) \ 
+		struct _ch_type_ ## src ## _ ## dest ## _ ## type { \
         chan_meta_t meta; \
         struct type data; \
     }
