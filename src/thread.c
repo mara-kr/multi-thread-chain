@@ -41,98 +41,103 @@ SELF_CHANNEL(scheduler_task, thread_array);
 //Dummy function wrapper to get the declarations to play nice
 void write_to_scheduler(sch_chan_fields field, void * input){
     thread_state_t thr;
-	switch(field){
-		case threads:
-			CHAN_OUT1(thread_state_t *, threads, *((thread_state_t **)input),
-								SELF_OUT_CH(scheduler_task));
-			break;
-		case thread:
+    switch(field){
+        case threads:
+            // TODO Fix - not pointer
+            CHAN_OUT1(thread_state_t *, threads, *((thread_state_t **)input),
+                    SELF_OUT_CH(scheduler_task));
+            break;
+        case thread:
             thr.thread = *((thread_t *) input);
             thr.active = 1; // FIXME
-			CHAN_OUT1(thread_state_t, threads[0], thr,
-								SELF_OUT_CH(scheduler_task));
-			break;
-		case current:
-			LIBCHAIN_PRINTF("Error- read only variable!\r\n");
-			break;
+            CHAN_OUT1(thread_state_t, threads[0], thr,
+                    SELF_OUT_CH(scheduler_task));
+            break;
+        case current:
+            LIBCHAIN_PRINTF("Error- read only variable!\r\n");
+            break;
         case num_threads:
-			LIBCHAIN_PRINTF("Error- read only variable!\r\n");
-			break;
-		default:
-			break;
-	}
+            LIBCHAIN_PRINTF("Error- read only variable!\r\n");
+            break;
+        default:
+            break;
+    }
 }
 
 void read_from_scheduler(sch_chan_fields field, void * output){
-	switch(field){
-		case threads:
-			output = CHAN_IN1(thread_state_t, threads,
-							 SELF_IN_CH(scheduler_task));
-			break;
-		case current:
-			*((unsigned *) output) = *CHAN_IN1(unsigned, current,
-								SELF_IN_CH(scheduler_task));
-			break;
-		case num_threads:
-			*((unsigned *) output) = *CHAN_IN1(unsigned, num_threads,
-								SELF_IN_CH(scheduler_task));
-			break;
+    switch(field){
+        case threads:
+            output = CHAN_IN1(thread_state_t, threads,
+                    SELF_IN_CH(scheduler_task));
+            break;
+        case current:
+            *((unsigned *) output) = *CHAN_IN1(unsigned, current,
+                    SELF_IN_CH(scheduler_task));
+            break;
+        case num_threads:
+            *((unsigned *) output) = *CHAN_IN1(unsigned, num_threads,
+                    SELF_IN_CH(scheduler_task));
+            break;
         case thread:
             LIBCHAIN_PRINTF("Unimplemented\r\n");
             break;
         default:
             break;
-	}
-	return;
+    }
+    return;
 }
 
 // Empty task so we can create a self-channel
 void scheduler_task() {
-		LIBCHAIN_PRINTF("Inside scheduler task!! \r\n");
-		thread_state_t *cur_thread = CHAN_IN1(thread_state_t, threads[0],
-																SELF_IN_CH(scheduler_task)); 
-		task_t *next_task = cur_thread->thread.context.task;
+    LIBCHAIN_PRINTF("Inside scheduler task!! \r\n");
+    thread_state_t *cur_thread = CHAN_IN1(thread_state_t, threads[0],
+            SELF_IN_CH(scheduler_task));
+    task_t *next_task = cur_thread->thread.context.task;
+    LIBCHAIN_PRINTF("next_task = %x\r\n", next_task);
+    LIBCHAIN_PRINTF("idx = %u\r\n", next_task->idx);
 
-		transition_to(next_task); 
-		return;
+    transition_to(next_task);
+    return;
 }
 
 void transition_to_mt(task_t *next_task){
-	LIBCHAIN_PRINTF("transition_to_mt \r\n"); 
-	unsigned thread_id = get_current_thread; 
-	thread_t next_thr; 
-	context_t next_ctx; 
-	//Update context passed in 
-	next_ctx.task = next_task; 
-	next_ctx.time = curctx->time + 1; 
-	//Make thread_t to pass to scheduler
-	next_thr.thread_id = thread_id; 
-	next_thr.context = next_ctx; 	
-	//Write thread out to scheduler
-	write_to_scheduler(thread, &next_thr);
-	//Transition to scheduler
-	TRANSITION_TO(scheduler_task); 
+    LIBCHAIN_PRINTF("transition_to_mt \r\n");
+    unsigned thread_id = get_current_thread().thread_id;
+    LIBCHAIN_PRINTF("thread_id = %u\r\n", thread_id);
+    thread_t next_thr;
+    context_t next_ctx;
+    //Update context passed in
+    next_ctx.task = next_task;
+    next_ctx.time = curctx->time + 1;
+    //Make thread_t to pass to scheduler
+    next_thr.thread_id = thread_id;
+    next_thr.context = next_ctx;
+    //Write thread out to scheduler
+    write_to_scheduler(thread, &next_thr);
+    //Transition to scheduler
+    TRANSITION_TO(scheduler_task);
 }
 
 
 /** @brief scheduler initialize the thread_array
 */
 void scheduler_init(){
-		thread_state_t *thread_states = CHAN_IN1(thread_state_t, threads,
-						SELF_IN_CH(scheduler_task));
-		//TODO add check for optimization
-		for(unsigned i = 0; i < MAX_NUM_THREADS; i++){
-				thread_states[i].active = 0;
-		}
-		//Set the current thread to index 0
-		unsigned curthread_index = 0;
-		CHAN_OUT1(unsigned, current, curthread_index, SELF_OUT_CH(scheduler_task));
-		//Set the number of threads to 1
-		//TODO make this not necessarily 1!
-		unsigned num_threads = 1;
-		CHAN_OUT1(unsigned, num_threads, num_threads, SELF_OUT_CH(scheduler_task));
-		LIBCHAIN_PRINTF("Inside scheduler init! \r\n");
-		return;
+    thread_state_t *thread_states = CHAN_IN1(thread_state_t, threads,
+            SELF_IN_CH(scheduler_task));
+    //TODO add check for optimization
+    for(unsigned i = 0; i < MAX_NUM_THREADS; i++){
+        thread_states[i].active = 0;
+    }
+    //Set the current thread to index 0
+    LIBCHAIN_PRINTF("writing to current\r\n");
+    unsigned curthread_index = 0;
+    CHAN_OUT1(unsigned, current, curthread_index, SELF_OUT_CH(scheduler_task));
+    //Set the number of threads to 1
+    //TODO make this not necessarily 1!
+    unsigned num_threads = 1;
+    CHAN_OUT1(unsigned, num_threads, num_threads, SELF_OUT_CH(scheduler_task));
+    LIBCHAIN_PRINTF("Inside scheduler init! \r\n");
+    return;
 }
 
 
@@ -143,8 +148,11 @@ void thread_init() {
     for (unsigned i = 1; i < MAX_NUM_THREADS; i++) {
         threads[i].active = 0;
     }
-    CHAN_OUT1(thread_state_t *, threads, threads,
-            SELF_OUT_CH(scheduler_task));
+    for (unsigned i = 0; i < MAX_NUM_THREADS; i++) {
+        CHAN_OUT1(thread_state_t, threads[i], threads[i],
+                SELF_OUT_CH(scheduler_task));
+    }
+    scheduler_init();
 }
 
 void thread_end() {
@@ -179,10 +187,11 @@ int thread_create(task_t *new_task) {
     return -2;
 }
 
-thread_t *get_current_thread() {
-    thread_state_t *threads = *CHAN_IN1(thread_state_t *, threads,
-            SELF_IN_CH(scheduler_task));
+thread_t get_current_thread() {
     unsigned current = *CHAN_IN1(unsigned, current,
             SELF_IN_CH(scheduler_task));
-    return &threads[current].thread;
+    thread_state_t thread = *CHAN_IN1(thread_state_t, threads[current],
+            SELF_IN_CH(scheduler_task));
+    LIBCHAIN_PRINTF("current = %u\r\n", current);
+    return thread.thread;
 }

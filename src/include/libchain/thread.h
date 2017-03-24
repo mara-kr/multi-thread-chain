@@ -49,7 +49,10 @@ int thread_create(task_t *new_task);
 /** @brief Gets the currently running thread
  *  @return Pointer to the struct describing the current thread
  */
-thread_t *get_current_thread();
+thread_t get_current_thread();
+
+
+void transition_to_mt(task_t *next_task);
 
 /** @brief returns a pointer to the current thread */
 uint8_t getThreadPtr();
