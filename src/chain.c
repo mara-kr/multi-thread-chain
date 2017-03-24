@@ -127,8 +127,8 @@ void transition_to(task_t *next_task)
     //
     //       Probably need to write a custom entry point in asm, and
     //       use it instead of the C runtime one.
-		LIBCHAIN_PRINTF("transition_to \r\n"); 
-		// Sorry, leaving dead code here...
+    LIBCHAIN_PRINTF("transition_to \r\n");
+	// Sorry, leaving dead code here...
     next_ctx = curctx->next_ctx;
     next_ctx->task = next_task;
     next_ctx->time = curctx->time + 1;
@@ -136,7 +136,6 @@ void transition_to(task_t *next_task)
     next_ctx->next_ctx = curctx;
     curctx = next_ctx;
 
-		
     task_prologue();
 
     __asm__ volatile ( // volatile because output operands unused by C
@@ -168,8 +167,8 @@ void *chan_in(const char *field_name, size_t var_size, int count, ...)
     unsigned i;
     unsigned latest_update = 0;
 #ifdef LIBCHAIN_ENABLE_DIAGNOSTICS
-    unsigned latest_chan_idx = 0;
-    char curidx;
+    //nsigned latest_chan_idx = 0;
+    //char curidx;
 #endif
 
     var_meta_t *var;
@@ -227,7 +226,7 @@ void *chan_in(const char *field_name, size_t var_size, int count, ...)
             latest_update = var->timestamp;
             latest_var = var;
 #ifdef LIBCHAIN_ENABLE_DIAGNOSTICS
-            latest_chan_idx = i;
+            //latest_chan_idx = i;
 #endif
         }
     }
@@ -268,7 +267,7 @@ void chan_out(const char *field_name, const void *value,
     int i;
     var_meta_t *var;
 #ifdef LIBCHAIN_ENABLE_DIAGNOSTICS
-    char curidx;
+    //char curidx;
 #endif
 
     va_start(ap, count);
