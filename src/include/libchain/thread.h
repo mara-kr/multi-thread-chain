@@ -11,10 +11,11 @@
 #define TRANSITION_TO_MT(task) transition_to_mt(TASK_REF(task))
 
 typedef enum sched_fields_{
-	threads,
-	thread,
-	current,
-	num_threads
+	THREADS,
+	THREAD,
+	CURRENT,
+	NEW_CTX, 
+	NUM_THREADS
 }sch_chan_fields ;
 
 typedef struct thread_t {

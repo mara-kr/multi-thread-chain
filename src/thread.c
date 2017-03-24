@@ -42,21 +42,25 @@ SELF_CHANNEL(scheduler_task, thread_array);
 void write_to_scheduler(sch_chan_fields field, void * input){
     thread_state_t thr;
     switch(field){
-        case threads:
+        case THREADS:
             // TODO Fix - not pointer
             CHAN_OUT1(thread_state_t *, threads, *((thread_state_t **)input),
                     SELF_OUT_CH(scheduler_task));
             break;
-        case thread:
+        case THREAD:
             thr.thread = *((thread_t *) input);
             thr.active = 1; // FIXME
             CHAN_OUT1(thread_state_t, threads[0], thr,
                     SELF_OUT_CH(scheduler_task));
             break;
-        case current:
+				case NEW_CTX: 
+						CHAN_OUT1(context_t,threads[0].context, input, 
+                    SELF_OUT_CH(scheduler_task));
+						break; 
+        case CURRENT:
             LIBCHAIN_PRINTF("Error- read only variable!\r\n");
             break;
-        case num_threads:
+        case NUM_THREADs:
             LIBCHAIN_PRINTF("Error- read only variable!\r\n");
             break;
         default:
