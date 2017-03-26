@@ -14,9 +14,9 @@ typedef enum sched_fields_{
 	THREADS,
 	THREAD,
 	CURRENT,
-	NEW_CTX, 
+	NEW_CTX,
 	NUM_THREADS
-}sch_chan_fields ;
+} sch_chan_fields ;
 
 typedef struct thread_t {
     // TODO - overflow is possible!

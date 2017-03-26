@@ -13,6 +13,13 @@
 
 #define MAX_DIRTY_SELF_FIELDS 4
 
+/* Dummy types for offset calculations */
+struct _void_type_t {
+    void * x;
+};
+
+typedef struct _void_type_t void_type_t;
+
 typedef void (task_func_t)(void);
 typedef unsigned chain_time_t;
 typedef uint32_t task_mask_t;
@@ -22,9 +29,10 @@ typedef unsigned task_idx_t;
 typedef enum {
     CHAN_TYPE_T2T,
     CHAN_TYPE_SELF,
+    CHAN_TYPE_SCHEDULER,
     CHAN_TYPE_MULTICAST,
     CHAN_TYPE_GLOBAL,
-		CHAN_TYPE_CALL,
+	CHAN_TYPE_CALL,
     CHAN_TYPE_RETURN,
 } chan_type_t;
 
@@ -254,6 +262,13 @@ void chan_out(const char *field_name, const void *value,
 
 #define SELF_CHANNEL_DEC(task, type) \
 		CH_TYPE(task, task, type) _ch_ ## task ## _ ## task
+
+#define SCHEDULER_CHANNEL(task, type) \
+    __nv CH_TYPE(task, task, type) _ch_ ## task ## _ ## task = \
+        { { CHAN_TYPE_SCHEDULER, { #task, #task } }, SELF_FIELDS_INITIALIZER(type) }
+
+#define SCHEDULER_CHANNEL_DEC(task, type) \
+        CH_TYPE(task, task, type) _ch_ ## task ## _ ## task
 
 #define GLOBAL_CHANNEL(task, type) \
 		__nv CH_TYPE(task, glob, type) _ch_ ## task ## _glob = \
