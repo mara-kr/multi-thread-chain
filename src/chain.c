@@ -33,7 +33,6 @@ __nv volatile unsigned _numBoots = 0;
 void task_prologue()
 {
     task_t *curtask = curctx->task;
-    LIBCHAIN_PRINTF("prologue: task #%u\r\n", curtask->idx);
 
     // Swaps of the self-channel buffer happen on transitions, not restarts.
     // We detect transitions by comparing the current time with a timestamp.
@@ -178,7 +177,6 @@ void *chan_in(const char *field_name, size_t var_size, int count, ...)
     va_start(ap, count);
 
     for (i = 0; i < count; ++i) {
-        LIBCHAIN_PRINTF("chanIn: i = %u, count = %u\r\n", i, count);
         uint8_t *chan = va_arg(ap, uint8_t *);
         size_t field_offset = va_arg(ap, unsigned);
 
@@ -233,9 +231,11 @@ void *chan_in(const char *field_name, size_t var_size, int count, ...)
     uint8_t *value = (uint8_t *)latest_var + offsetof(VAR_TYPE(void_type_t), value);
 
 #ifdef LIBCHAIN_ENABLE_DIAGNOSTICS
+    /*
     for (int i = 0; i < var_size - sizeof(var_meta_t); ++i)
         LIBCHAIN_PRINTF("%02x ", value[i]);
     LIBCHAIN_PRINTF("\r\n");
+    */
 #endif
 
     // TODO: No two timestamps compared above can be equal.
@@ -330,8 +330,6 @@ void chan_out(const char *field_name, const void *value,
 
         var->timestamp = curctx->time;
         void *var_value = (uint8_t *)var + offsetof(VAR_TYPE(void_type_t), value);
-        LIBCHAIN_PRINTF("CHAN_OUT: %x->%x\r\n", (unsigned) var_value,
-                (unsigned) value);
         memcpy(var_value, value, var_size - sizeof(var_meta_t));
     }
 
