@@ -7,6 +7,7 @@ OBJECTS = \
 DEPS += \
 	libmsp \
 
+LIBCHAIN_ENABLE_DIAGNOSTICS = 1
 override SRC_ROOT = ../../src
 
 override CFLAGS += \

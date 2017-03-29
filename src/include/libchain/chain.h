@@ -11,7 +11,14 @@
 #define TASK_NAME_SIZE 32
 #define CHAN_NAME_SIZE 32
 
-#define MAX_DIRTY_SELF_FIELDS 4
+#define MAX_DIRTY_SELF_FIELDS 8
+
+/* Dummy types for offset calculations */
+struct _void_type_t {
+    void * x;
+};
+
+typedef struct _void_type_t void_type_t;
 
 typedef void (task_func_t)(void);
 typedef unsigned chain_time_t;
@@ -22,9 +29,10 @@ typedef unsigned task_idx_t;
 typedef enum {
     CHAN_TYPE_T2T,
     CHAN_TYPE_SELF,
+    CHAN_TYPE_SCHEDULER,
     CHAN_TYPE_MULTICAST,
     CHAN_TYPE_GLOBAL,
-		CHAN_TYPE_CALL,
+	CHAN_TYPE_CALL,
     CHAN_TYPE_RETURN,
 } chan_type_t;
 
@@ -44,9 +52,9 @@ typedef struct _var_meta_t {
 } var_meta_t;
 
 typedef struct _global_field_meta_t{
-		//A placeholder for now... 
-		unsigned test; 
-} global_field_meta_t; 
+		//A placeholder for now...
+		unsigned test;
+} global_field_meta_t;
 
 typedef struct _self_field_meta_t {
     // Single word (two bytes) value that contains
@@ -105,7 +113,7 @@ typedef struct {
 		}
 
 #define CH_TYPE(src, dest, type) \
-    struct _ch_type_ ## src ## _ ## dest ## _ ## type { \
+		struct _ch_type_ ## src ## _ ## dest ## _ ## type { \
         chan_meta_t meta; \
         struct type data; \
     }
@@ -251,6 +259,16 @@ void chan_out(const char *field_name, const void *value,
 #define SELF_CHANNEL(task, type) \
     __nv CH_TYPE(task, task, type) _ch_ ## task ## _ ## task = \
         { { CHAN_TYPE_SELF, { #task, #task } }, SELF_FIELDS_INITIALIZER(type) }
+
+#define SELF_CHANNEL_DEC(task, type) \
+		CH_TYPE(task, task, type) _ch_ ## task ## _ ## task
+
+#define SCHEDULER_CHANNEL(task, type) \
+    __nv CH_TYPE(task, task, type) _ch_ ## task ## _ ## task = \
+        { { CHAN_TYPE_SCHEDULER, { #task, #task } }, SELF_FIELDS_INITIALIZER(type) }
+
+#define SCHEDULER_CHANNEL_DEC(task, type) \
+        CH_TYPE(task, task, type) _ch_ ## task ## _ ## task
 
 #define GLOBAL_CHANNEL(task, type) \
 		__nv CH_TYPE(task, glob, type) _ch_ ## task ## _glob = \
