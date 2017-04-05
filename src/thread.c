@@ -51,63 +51,6 @@ static void scheduler_chan_out(const char *field_name, const void *value,
 TASK(5, scheduler_task)
 SELF_CHANNEL(scheduler_task, thread_array);
 
-//Dummy function wrapper to get the declarations to play nice
-void write_to_scheduler(sch_chan_fields field, void * input){
-    thread_state_t thr;
-    unsigned channel_val;
-    switch(field){
-        case THREADS:
-            // TODO Fix - not pointer
-            CHAN_OUT1(thread_state_t *, threads, *((thread_state_t **)input),
-                    SELF_OUT_CH(scheduler_task));
-            break;
-        case THREAD:
-            thr.thread = *((thread_t *) input);
-            thr.active = 1; // FIXME
-            SCHEDULER_CHAN_OUT(thread_state_t, threads[0], thr,
-                    SELF_OUT_CH(scheduler_task));
-            break;
-        case NEW_CTX:
-            thr.thread.context = *((context_t *) input);
-            thr.thread.thread_id = 0;
-            thr.active = 1;
-            SCHEDULER_CHAN_OUT(thread_state_t, threads[0], thr,
-                SELF_OUT_CH(scheduler_task));
-            break;
-        case CURRENT:
-            channel_val = *((unsigned *) input);
-            SCHEDULER_CHAN_OUT(unsigned, current, channel_val,
-                SELF_OUT_CH(scheduler_task));
-            break;
-        case NUM_THREADS:
-            channel_val = *((unsigned *) input);
-            SCHEDULER_CHAN_OUT(unsigned, num_threads, channel_val,
-                SELF_OUT_CH(scheduler_task));
-            break;
-        default:
-            break;
-    }
-}
-
-void read_from_scheduler(sch_chan_fields field, void * output){
-    switch(field){
-        case CURRENT:
-            *((unsigned *) output) = *SCHEDULER_CHAN_IN(unsigned, current,
-                    SELF_IN_CH(scheduler_task));
-            break;
-        case NUM_THREADS:
-            *((unsigned *) output) = *SCHEDULER_CHAN_IN(unsigned, num_threads,
-                    SELF_IN_CH(scheduler_task));
-            break;
-        case THREAD:
-            LIBCHAIN_PRINTF("Unimplemented\r\n");
-            break;
-        default:
-            break;
-    }
-    return;
-}
-
 // Same as CHAN_OUT, but increments the number of dirty fields for
 // the scheduler
 static void scheduler_chan_out(const char *field_name, const void *value,
@@ -138,6 +81,7 @@ static void scheduler_chan_out(const char *field_name, const void *value,
 
 void scheduler_task() {
     LIBCHAIN_PRINTF("Inside scheduler task!! \r\n");
+    //TODO Needs to get threads[current]
     thread_state_t *cur_thread = CHAN_IN1(thread_state_t, threads[0],
             SELF_IN_CH(scheduler_task));
     task_t *next_task = cur_thread->thread.context.task;
@@ -150,6 +94,7 @@ void transition_to_mt(task_t *next_task){
     LIBCHAIN_PRINTF("transition_to_mt \r\n");
     unsigned thread_id = get_current_thread().thread_id;
     thread_t next_thr;
+    thread_state_t next_thr_state;
     context_t next_ctx;
     //Update context passed in
     next_ctx.task = next_task;
@@ -158,8 +103,10 @@ void transition_to_mt(task_t *next_task){
     next_thr.thread_id = thread_id;
     next_thr.context = next_ctx;
     //Write thread out to scheduler
-    write_to_scheduler(THREAD, &next_thr);
-    //Transition to scheduler
+    next_thr_state.thread = next_thr;
+    next_thr_state.active = 1; // FIXME
+    SCHEDULER_CHAN_OUT(thread_state_t, threads[0], next_thr_state,
+            SELF_OUT_CH(scheduler_task));
     TRANSITION_TO(scheduler_task);
 }
 
@@ -178,18 +125,26 @@ void scheduler_init(){
     }
     //Set the current thread to index 0
     unsigned current = 0;
-    write_to_scheduler(CURRENT, &current);
+    SCHEDULER_CHAN_OUT(unsigned, current, current,
+            SELF_OUT_CH(scheduler_task));
     //Set the number of threads to 1
     //TODO make this not necessarily 1!
     unsigned num_threads = 1;
-    write_to_scheduler(NUM_THREADS, &num_threads);
+    SCHEDULER_CHAN_OUT(unsigned, num_threads, num_threads,
+            SELF_OUT_CH(scheduler_task));
     LIBCHAIN_PRINTF("Inside scheduler init! \r\n");
     return;
 }
 
 
 void thread_init() {
-    write_to_scheduler(NEW_CTX, curctx);
+    thread_state_t thr;
+    thr.thread.context = *curctx;
+    thr.thread.thread_id = 0;
+    thr.active = 1;
+    SCHEDULER_CHAN_OUT(thread_state_t, threads[0], thr,
+            SELF_OUT_CH(scheduler_task));
+
     thread_state_t threads[MAX_NUM_THREADS];
     threads[0].active = 1;
 

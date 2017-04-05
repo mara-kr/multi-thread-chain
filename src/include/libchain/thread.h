@@ -10,14 +10,6 @@
 
 #define TRANSITION_TO_MT(task) transition_to_mt(TASK_REF(task))
 
-typedef enum sched_fields_{
-	THREADS,
-	THREAD,
-	CURRENT,
-	NEW_CTX,
-	NUM_THREADS
-} sch_chan_fields ;
-
 typedef struct thread_t {
     // TODO - overflow is possible!
     unsigned thread_id;
@@ -58,7 +50,4 @@ void transition_to_mt(task_t *next_task);
 /** @brief returns a pointer to the current thread */
 uint8_t getThreadPtr();
 
-void write_to_scheduler(sch_chan_fields field, void *input);
-
-void read_from_scheduler(sch_chan_fields field, void *output);
 #endif
