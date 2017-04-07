@@ -82,11 +82,14 @@ static void scheduler_chan_out(const char *field_name, const void *value,
 void scheduler_task() {
     LIBCHAIN_PRINTF("Inside scheduler task!! \r\n");
    	task_prologue(); 
-		unsigned current = CHAN_IN2(unsigned, current, CH(task_init, scheduler_task),
+		unsigned current = *CHAN_IN2(unsigned, current, CH(task_init, scheduler_task),
             										SELF_IN_CH(scheduler_task)); 
-    thread_state_t *cur_thread = CHAN_IN2(thread_state_t,threads[current], 
+    LIBCHAIN_PRINTF("Current = %u \r\n", current); 
+		thread_state_t cur_thread = *CHAN_IN2(thread_state_t,threads[current], 
 												CH(task_init, scheduler_task), SELF_IN_CH(scheduler_task));
-    task_t *next_task = cur_thread->thread.context.task;
+   LIBCHAIN_PRINTF("Cur thread.id = %u active = %u \r\n", 
+	 											cur_thread.thread.thread_id, cur_thread.active); 
+	 task_t *next_task = cur_thread.thread.context.task;
 
     transition_to(next_task);
     return;
@@ -114,9 +117,10 @@ void transition_to_mt(task_t *next_task){
     next_thr_state.thread = next_thr;
     next_thr_state.active = 1; // Hasn't called thread_end, still active
 
-    unsigned current = SCHEDULER_CHAN_IN(unsigned, current,
+    unsigned current = *SCHEDULER_CHAN_IN(unsigned, current,
             						SELF_IN_CH(scheduler_task));
-    SCHEDULER_CHAN_OUT(thread_state_t, threads[current], next_thr_state,
+   	LIBCHAIN_PRINTF("Current = %u \r\n", current);  
+		SCHEDULER_CHAN_OUT(thread_state_t, threads[current], next_thr_state,
             SELF_OUT_CH(scheduler_task));
     TRANSITION_TO(scheduler_task);
 }
@@ -129,13 +133,14 @@ void scheduler_init(){
     LIBCHAIN_PRINTF("Inside scheduler init! \r\n");
 
     //TODO add check for optimization
-		for (unsigned i = 0; i < MAX_NUM_THREADS; i++) {
+		//Assume thread_init set all these to 0? 
+		/*for (unsigned i = 0; i < MAX_NUM_THREADS; i++) {
        // thread = *SCHEDULER_CHAN_IN(thread_state_t, threads[i],
        //         SELF_IN_CH(scheduler_task));
        	 thread.active = 0;
         CHAN_OUT1(thread_state_t, threads[i], thread,
                 CH(task_init, scheduler_task));
-    }
+    }*/
 
     //Set the current thread to index 0
     unsigned current = 0;
@@ -154,8 +159,8 @@ void scheduler_init(){
 
 void thread_init() {
     thread_state_t thr;
-    thr.thread.context = *curctx;
-    thr.thread.thread_id = 0;
+    thr.thread.context = *curctx;  
+		thr.thread.thread_id = 0;
     thr.active = 1;
     CHAN_OUT1(thread_state_t, threads[0], thr,CH(task_init, scheduler_task));
 
@@ -166,7 +171,7 @@ void thread_init() {
     for (unsigned i = 1; i < MAX_NUM_THREADS; i++) {
         threads[i].active = 0;
     }
-    for (unsigned i = 0; i < MAX_NUM_THREADS; i++) {
+    for (unsigned i = 1; i < MAX_NUM_THREADS; i++) {
         CHAN_OUT1(thread_state_t, threads[i], threads[i],
                 CH(task_init, scheduler_task));
     }
