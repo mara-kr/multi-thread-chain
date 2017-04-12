@@ -32,7 +32,6 @@ struct thread_lib_fields {
 
 #define FIELD_INIT_thread_lib_fields {\
     SELF_FIELD_INITIALIZER,\
-    SELF_FIELD_INITIALIZER,\
 }
 
 struct thread_array {
@@ -85,7 +84,7 @@ void scheduler_task() {
         threads[i] = *CHAN_IN1(thread_state_t, threads[i], THREAD_ARRAY_CH);
         // Set the indicies array to avoid two traversals
         if (!threads[i].active) {
-            CHAN_OUT1(unsigned, indicies[indicies_size], i, INDICIES_CH);
+            CHAN_OUT1(unsigned, free_indicies[indicies_size], i, INDICIES_CH);
             indicies_size++;
         }
     }
@@ -111,7 +110,7 @@ void scheduler_task() {
     set_current(current);
     thread_state_t curr_thread = threads[current];
 
-    task_t *next_task = cur_thread.thread.context.task;
+    task_t *next_task = curr_thread.thread.context.task;
     transition_to(next_task);
 }
 
@@ -129,9 +128,9 @@ void transition_to_mt(task_t *next_task){
     next_ctx.time = curctx->time + 1;
 
     //Make thread_t to pass to scheduler
-    thread_state_t curr_thr = CHAN_IN1(thread_state_t, threads[current],
+    thread_state_t curr_thr = *CHAN_IN1(thread_state_t, threads[current],
             THREAD_ARRAY_CH);
-    next_thr.thread_id = curr_thr.id;
+    next_thr.thread_id = curr_thr.thread.thread_id;
     next_thr.context = next_ctx;
 
     //Write thread out to scheduler
@@ -167,14 +166,14 @@ void thread_init() {
 
     // Setup free indicies array - all free except index 0
     for (unsigned i = 1; i < MAX_NUM_THREADS; i++) {
-        CHAN_OUT1(unsigned, indicies[i-1], i, INDICIES_CH);
+        CHAN_OUT1(unsigned, free_indicies[i-1], i, INDICIES_CH);
     }
     // Set the size of the free indicies array
     unsigned indicies_size = MAX_NUM_THREADS - 1;
     CHAN_OUT1(unsigned, size, indicies_size, INDICIES_CH);
 
     //Set the current thread to index 0
-    set_current(0)
+    set_current(0);
 }
 
 
@@ -190,7 +189,7 @@ void thread_end() {
 
 
 int thread_create(task_t *new_task) {
-    unsigned indicies_size = CHAN_IN1(unsigned, size, INDICIES_CH);
+    unsigned indicies_size = *CHAN_IN1(unsigned, size, INDICIES_CH);
     thread_state_t new_thread;
 
     if (curr_free_index < indicies_size) {
@@ -198,7 +197,7 @@ int thread_create(task_t *new_task) {
         // TODO Set to creation time instead of 0?
         new_thread.thread.context.time = 0;
         new_thread.thread.context.next_ctx = NULL;
-        CHAN_OUT1(thread_state_t, threads[curr_free_index],
+        CHAN_OUT1(thread_state_t, threads[curr_free_index], new_thread,
             THREAD_ARRAY_CH);
         curr_free_index++;
         return 0;
@@ -228,7 +227,7 @@ static void scheduler_chan_out(const char *field_name, const void *value,
 /** @brief Get the index of the current running thread in threads[]
  */
 static unsigned get_current() {
-    return SCHEDULER_CHAN_IN(unsigned, current, THREAD_FIELDS_CH);
+    return *SCHEDULER_CHAN_IN(unsigned, current, THREAD_FIELDS_CH);
 }
 
 

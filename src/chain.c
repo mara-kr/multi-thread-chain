@@ -337,7 +337,7 @@ void chan_out(const char *field_name, const void *value,
 }
 
 // Defined in thread.c
-extern curr_free_index;
+extern unsigned curr_free_index;
 
 /** @brief Entry point upon reboot */
 int main() {
