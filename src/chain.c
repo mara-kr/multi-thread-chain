@@ -336,12 +336,16 @@ void chan_out(const char *field_name, const void *value,
     va_end(ap);
 }
 
+// Defined in thread.c
+extern curr_free_index;
+
 /** @brief Entry point upon reboot */
 int main() {
 
     _init();
     _numBoots++;
 
+    curr_free_index = 0;
     // Resume execution at the last task that started but did not finish
 
     // TODO: using the raw transtion would be possible once the
