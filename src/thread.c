@@ -17,6 +17,8 @@
 
 #define MAX_NUM_THREADS 4
 
+//Yes, this is kludgy, but so it goes
+__nv unsigned task_init_flag = 0; 
 
 typedef struct thread_state_t {
     thread_t thread;
@@ -78,19 +80,24 @@ static void scheduler_chan_out(const char *field_name, const void *value,
     memcpy(var_value, value, var_size - sizeof(var_meta_t));
 }
 
-
 void scheduler_task() {
     LIBCHAIN_PRINTF("Inside scheduler task!! \r\n");
-   	task_prologue(); 
-		unsigned current = *CHAN_IN2(unsigned, current, CH(task_init, scheduler_task),
+    task_prologue(); 
+    //Yes, I know it's an NV read inside of every scheduler run.. we're working on it. 
+    if(task_init_flag){
+      task_init_flag = 0; 
+	  }
+     unsigned current = *CHAN_IN2(unsigned, current, CH(task_init, scheduler_task),
             										SELF_IN_CH(scheduler_task)); 
-    LIBCHAIN_PRINTF("Current = %u \r\n", current); 
-		thread_state_t cur_thread = *CHAN_IN2(thread_state_t,threads[current], 
-												CH(task_init, scheduler_task), SELF_IN_CH(scheduler_task));
+    LIBCHAIN_PRINTF("scheduler_task Current = %u \r\n", current); 
+		//thread_state_t cur_thread = *CHAN_IN2(thread_state_t,threads[current], 
+	  //											CH(task_init, scheduler_task), SELF_IN_CH(scheduler_task));
+   thread_state_t cur_thread = *CHAN_IN1(thread_state_t, threads[current],
+                            SELF_IN_CH(scheduler_task)); 
    LIBCHAIN_PRINTF("Cur thread.id = %u active = %u \r\n", 
 	 											cur_thread.thread.thread_id, cur_thread.active); 
 	 task_t *next_task = cur_thread.thread.context.task;
-
+   LIBCHAIN_PRINTF("scheduler next task = %x \r\n", next_task); 
     transition_to(next_task);
     return;
 }
@@ -108,7 +115,7 @@ void transition_to_mt(task_t *next_task){
     //Update context passed in
     next_ctx.task = next_task;
     next_ctx.time = curctx->time + 1;
-
+    LIBCHAIN_PRINTF("transition_to_mt next task = %x \r\n",next_ctx.task);
     //Make thread_t to pass to scheduler
     next_thr.thread_id = thread_id;
     next_thr.context = next_ctx;
@@ -119,19 +126,52 @@ void transition_to_mt(task_t *next_task){
 
     unsigned current = *SCHEDULER_CHAN_IN(unsigned, current,
             						SELF_IN_CH(scheduler_task));
-   	LIBCHAIN_PRINTF("Current = %u \r\n", current);  
+    LIBCHAIN_PRINTF("transition_to_mt Current = %x \r\n", current);  
 		SCHEDULER_CHAN_OUT(thread_state_t, threads[current], next_thr_state,
             SELF_OUT_CH(scheduler_task));
     TRANSITION_TO(scheduler_task);
 }
 
+void swap_scheduler_buffer(void){
+  //So we don't have to keep calling TASK_REF...
+  task_t *curtask = TASK_REF(scheduler_task); 
+  // Minimize FRAM reads
+  self_field_meta_t **dirty_self_fields = curtask->dirty_self_fields;
+
+  int i;
+
+  // It is safe to repeat the loop for the same element, because the swap
+  // operation clears the dirty bit. We only need to be a little bit careful
+  // to decrement the count strictly after the swap.
+  while ((i = curtask->num_dirty_self_fields) > 0) {
+      self_field_meta_t *self_field = dirty_self_fields[--i];
+
+      if (self_field->idx_pair & SELF_CHAN_IDX_BIT_DIRTY_CURRENT) {
+          // Atomically: swap AND clear the dirty bit (by "moving" it over to MSB)
+          __asm__ volatile (
+              "SWPB %[idx_pair]\n"
+              : [idx_pair]  "=m" (self_field->idx_pair)
+          );
+      }
+
+      // Trade-off: either we do one FRAM write after each element, or
+      // we do only one write at the end (set to 0) but also not make
+      // forward progress if we reboot in the middle of this loop.
+      // We opt for making progress.
+      curtask->num_dirty_self_fields = i;
+  }
+
+}
 
 /** @brief scheduler initialize the thread_array
 */
 void scheduler_init(){
     thread_state_t thread;
     LIBCHAIN_PRINTF("Inside scheduler init! \r\n");
-
+    //Not worried about writing to NV memory here b/c it'll get used in transition_to_mt
+    //which can't be called until AFTER this finishes b/c of the ordering of functions in
+    //tasks. 
+    task_init_flag = 1; 
     //TODO add check for optimization
 		//Assume thread_init set all these to 0? 
 		/*for (unsigned i = 0; i < MAX_NUM_THREADS; i++) {
@@ -144,15 +184,15 @@ void scheduler_init(){
 
     //Set the current thread to index 0
     unsigned current = 0;
-    //SCHEDULER_CHAN_OUT(unsigned, current, current,
-    //        SELF_OUT_CH(scheduler_task));
-		CHAN_OUT1(unsigned, current, current,CH(task_init, scheduler_task)); 
+    SCHEDULER_CHAN_OUT(unsigned, current, current,
+            SELF_OUT_CH(scheduler_task));
+		//CHAN_OUT1(unsigned, current, current,CH(task_init, scheduler_task)); 
     //Set the number of threads to 1 (just the current running thread)
     unsigned num_threads = 1;
     //SCHEDULER_CHAN_OUT(unsigned, num_threads, num_threads,
     //        SELF_OUT_CH(scheduler_task));
 		CHAN_OUT1(unsigned, num_threads, num_threads, CH(task_init, scheduler_task)); 
-    
+    swap_scheduler_buffer();  
 		return;
 }
 
