@@ -24,6 +24,8 @@ __nv extern thread_t * volatile cur_thread;
 
 #define THREAD_CREATE(task) thread_create(TASK_REF(task))
 
+//For consistency in macro-omnipresence
+#define THREAD_END() thread_end()
 /** @brief Initialize the multi-threading library at first boot */
 void thread_init();
 
