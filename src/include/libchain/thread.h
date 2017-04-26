@@ -44,6 +44,10 @@ int thread_create(task_t *new_task);
  */
 thread_t get_current_thread();
 
+/** @brief Deschedules the running thread
+ *  @return Void
+ */
+void deschedule();
 
 void transition_to_mt(task_t *next_task);
 

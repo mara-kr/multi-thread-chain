@@ -205,7 +205,10 @@ int thread_create(task_t *new_task) {
     return -1;
 }
 
-
+void deschedule() {
+    task_t *curr_task = curctx->task;
+    transition_to_mt(curr_task);
+}
 
 /***********************************************************
  * Interface to write to the scheduler's broken self channel
