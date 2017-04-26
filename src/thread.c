@@ -39,7 +39,7 @@ struct thread_array {
     CHAN_FIELD_ARRAY(thread_state_t, threads, MAX_NUM_THREADS);
 };
 
-struct free_indicies {
+struct indicies {
     // Indexes of spots in the thread array that aren't in use
     CHAN_FIELD_ARRAY(unsigned, free_indicies, MAX_NUM_THREADS);
     // Size of the above array
@@ -62,7 +62,7 @@ SELF_CHANNEL(scheduler_task, thread_lib_fields);
 CHANNEL(task_global, scheduler_task, thread_array);
 #define THREAD_ARRAY_CH (CH(task_global, scheduler_task))
 // Broken channel - scheduler task defines free slots in threads[]
-CHANNEL(scheduler_task, task_global, free_indicies);
+CHANNEL(scheduler_task, task_global, indicies);
 #define INDICIES_CH (CH(scheduler_task, task_global))
 
 
@@ -76,6 +76,7 @@ void task_global() {
 // Do all the things to run the scheduler
 void scheduler_task() {
     task_prologue(); // Swap buffers for scheduler self_channel
+    LIBCHAIN_PRINTF("Inside scheduler task!! \r\n");
 
     // There's probably a better way to get an array into volatile memory
     thread_state_t threads[MAX_NUM_THREADS];
@@ -88,7 +89,7 @@ void scheduler_task() {
             indicies_size++;
         }
     }
-
+    curr_free_index = 0;
     // Write the size of the indicies array
     CHAN_OUT1(unsigned, size, indicies_size, INDICIES_CH);
     // Zero the current free index since we just wrote the scheduler array
@@ -98,8 +99,11 @@ void scheduler_task() {
 
     // Round robin - start with the next potentially schedulable thread
     unsigned curr_idx = (current + 1) % MAX_NUM_THREADS;
+    LIBCHAIN_PRINTF("curr idx = %u \r\n",curr_idx);
     // Look for the next task to schedule
     while (1) {
+        LIBCHAIN_PRINTF("threads[curr_idx]=%i active=%u \r\n",curr_idx,
+                        threads[curr_idx].active);
         if (threads[curr_idx].active) {
             current = curr_idx;
             break;
@@ -111,6 +115,7 @@ void scheduler_task() {
     thread_state_t curr_thread = threads[current];
 
     task_t *next_task = curr_thread.thread.context.task;
+
     transition_to(next_task);
 }
 
@@ -126,7 +131,7 @@ void transition_to_mt(task_t *next_task){
 
     next_ctx.task = next_task;
     next_ctx.time = curctx->time + 1;
-
+    LIBCHAIN_PRINTF("transition_to_mt next task = %x \r\n",next_ctx.task);
     //Make thread_t to pass to scheduler
     thread_state_t curr_thr = *CHAN_IN1(thread_state_t, threads[current],
             THREAD_ARRAY_CH);
@@ -143,6 +148,36 @@ void transition_to_mt(task_t *next_task){
     TRANSITION_TO(scheduler_task);
 }
 
+void swap_scheduler_buffer(void){
+  //So we don't have to keep calling TASK_REF...
+  task_t *curtask = TASK_REF(scheduler_task);
+  // Minimize FRAM reads
+  self_field_meta_t **dirty_self_fields = curtask->dirty_self_fields;
+
+  int i;
+
+  // It is safe to repeat the loop for the same element, because the swap
+  // operation clears the dirty bit. We only need to be a little bit careful
+  // to decrement the count strictly after the swap.
+  while ((i = curtask->num_dirty_self_fields) > 0) {
+      self_field_meta_t *self_field = dirty_self_fields[--i];
+
+      if (self_field->idx_pair & SELF_CHAN_IDX_BIT_DIRTY_CURRENT) {
+          // Atomically: swap AND clear the dirty bit (by "moving" it over to MSB)
+          __asm__ volatile (
+              "SWPB %[idx_pair]\n"
+              : [idx_pair]  "=m" (self_field->idx_pair)
+          );
+      }
+
+      // Trade-off: either we do one FRAM write after each element, or
+      // we do only one write at the end (set to 0) but also not make
+      // forward progress if we reboot in the middle of this loop.
+      // We opt for making progress.
+      curtask->num_dirty_self_fields = i;
+  }
+
+}
 
 /** @brief Setup the 0th index in the threads array to the current
  *         running thread, zero other elements of thread array,
@@ -167,18 +202,21 @@ void thread_init() {
     // Setup free indicies array - all free except index 0
     for (unsigned i = 1; i < MAX_NUM_THREADS; i++) {
         CHAN_OUT1(unsigned, free_indicies[i-1], i, INDICIES_CH);
+        LIBCHAIN_PRINTF("Free= %i \r\n",i);
     }
+
     // Set the size of the free indicies array
     unsigned indicies_size = MAX_NUM_THREADS - 1;
     CHAN_OUT1(unsigned, size, indicies_size, INDICIES_CH);
-
     //Set the current thread to index 0
     set_current(0);
+    swap_scheduler_buffer();
 }
 
 
 void thread_end() {
     unsigned current = get_current();
+    LIBCHAIN_PRINTF("Ended thread %u \r\n", current);
     thread_state_t curr_thread = *CHAN_IN1(thread_state_t , threads[current],
         THREAD_ARRAY_CH);
     curr_thread.active = 0;
@@ -191,17 +229,25 @@ void thread_end() {
 int thread_create(task_t *new_task) {
     unsigned indicies_size = *CHAN_IN1(unsigned, size, INDICIES_CH);
     thread_state_t new_thread;
-
+    LIBCHAIN_PRINTF("Inside thread create!! new task = %x\r\n", new_task);
+    unsigned new_thr_slot = *CHAN_IN1(unsigned,
+            free_indicies[curr_free_index],
+            INDICIES_CH);
+    LIBCHAIN_PRINTF("new_thr_slot = %u , curr_free= %u\r\n",
+            new_thr_slot,curr_free_index);
     if (curr_free_index < indicies_size) {
+
         new_thread.thread.context.task = new_task;
         // TODO Set to creation time instead of 0?
         new_thread.thread.context.time = 0;
         new_thread.thread.context.next_ctx = NULL;
-        CHAN_OUT1(thread_state_t, threads[curr_free_index], new_thread,
+
+        CHAN_OUT1(thread_state_t, threads[new_thr_slot], new_thread,
             THREAD_ARRAY_CH);
         curr_free_index++;
         return 0;
     }
+
     return -1;
 }
 
