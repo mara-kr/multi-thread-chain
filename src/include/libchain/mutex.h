@@ -6,6 +6,7 @@
 
 typedef struct mutex_t {
     unsigned free;
+    unsigned holder; 
 } mutex_t;
 
 /** @brief Initialize the mutex pointed to by m
@@ -16,11 +17,12 @@ int mutex_init(mutex_t *m);
 
 /** @brief Attempt to lock mutex m
  *  @param m Mutex to lock
+ *  @param id thread id of holder
  *  @return Void
  *
  *  If the mutex cannot be locked, deschedule the calling thread
  */
-void mutex_lock(mutex_t *m);
+void mutex_lock(mutex_t *m, unsigned id);
 
 /** @brief Unlock mutex m
  *  @param m Mutex to unlock

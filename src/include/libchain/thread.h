@@ -8,6 +8,8 @@
 
 #include "chain.h"
 
+#define MAX_NUM_THREADS 4
+
 #define TRANSITION_TO_MT(task) transition_to_mt(TASK_REF(task))
 
 typedef struct thread_t {
@@ -45,6 +47,11 @@ int thread_create(task_t *new_task);
  *  @return Pointer to the struct describing the current thread
  */
 thread_t get_current_thread();
+
+/** @brief get ID of currently running thread
+ *  @return ID 
+ */
+ unsigned get_current(); 
 
 /** @brief Deschedules the running thread
  *  @return Void
