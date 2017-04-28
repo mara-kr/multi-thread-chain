@@ -22,7 +22,7 @@ int mutex_init(mutex_t *m);
  *
  *  If the mutex cannot be locked, deschedule the calling thread
  */
-void mutex_lock(mutex_t *m, unsigned id);
+void mutex_lock(mutex_t *m);
 
 /** @brief Unlock mutex m
  *  @param m Mutex to unlock

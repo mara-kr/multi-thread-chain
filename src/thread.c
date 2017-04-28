@@ -45,7 +45,7 @@ struct indicies {
     CHAN_FIELD(unsigned, size);
 };
 
-static unsigned get_current();
+unsigned get_current();
 static void set_current(unsigned current);
 
 
@@ -274,7 +274,7 @@ static void scheduler_chan_out(const char *field_name, const void *value,
 
 /** @brief Get the index of the current running thread in threads[]
  */
-static unsigned get_current() {
+unsigned get_current() {
     return *SCHEDULER_CHAN_IN(unsigned, current, THREAD_FIELDS_CH);
 }
 

@@ -48,11 +48,6 @@ int thread_create(task_t *new_task);
  */
 thread_t get_current_thread();
 
-/** @brief get ID of currently running thread
- *  @return ID 
- */
- unsigned get_current(); 
-
 /** @brief Deschedules the running thread
  *  @return Void
  */
