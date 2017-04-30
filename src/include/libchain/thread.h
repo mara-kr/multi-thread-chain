@@ -58,4 +58,20 @@ void transition_to_mt(task_t *next_task);
 /** @brief returns a pointer to the current thread */
 uint8_t getThreadPtr();
 
+/** @brief Enable interrupts on the msp430 */
+void enable_interrupts();
+
+void _interrupt_setup();
+void return_from_interrupt();
+
+
+/** @brief Designate function to run on interrupt firing on Port 1 */
+#define INTERRUPT_TASK(func) \
+    _interrupt void Port_1() { \
+        _interrupt_setup(); \
+        func();\
+    }
+
+#define IRET return_from_interrupt();
+
 #endif
