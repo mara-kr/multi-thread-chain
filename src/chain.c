@@ -123,7 +123,7 @@ void transition_to(task_t *next_task)
     //       Probably need to write a custom entry point in asm, and
     //       use it instead of the C runtime one.
     LIBCHAIN_PRINTF("transition_to \r\n");
-	// Sorry, leaving dead code here...
+    // Sorry, leaving dead code here...
     next_ctx = curctx->next_ctx;
     next_ctx->task = next_task;
     next_ctx->time = curctx->time + 1;
@@ -338,6 +338,7 @@ void chan_out(const char *field_name, const void *value,
 
 // Defined in thread.c
 extern unsigned curr_free_index;
+extern __nv uint8_t interrupt_active;
 
 /** @brief Entry point upon reboot */
 int main() {
@@ -346,6 +347,10 @@ int main() {
     _numBoots++;
 
     curr_free_index = 0;
+    // TODO - assumes NV is initialized to zero
+    if (!interrupt_active) { // Enable interrupts if no interupt active
+        __bis_SR_register(GIE);
+    }
     // Resume execution at the last task that started but did not finish
 
     // TODO: using the raw transtion would be possible once the

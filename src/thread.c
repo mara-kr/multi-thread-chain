@@ -72,7 +72,6 @@ void task_global() {
 }
 
 
-
 // Do all the things to run the scheduler
 void scheduler_task() {
     task_prologue(); // Swap buffers for scheduler self_channel
@@ -149,6 +148,7 @@ void transition_to_mt(task_t *next_task){
     TRANSITION_TO(scheduler_task);
 }
 
+
 void swap_scheduler_buffer(void){
   //So we don't have to keep calling TASK_REF...
   task_t *curtask = TASK_REF(scheduler_task);
@@ -177,8 +177,8 @@ void swap_scheduler_buffer(void){
       // We opt for making progress.
       curtask->num_dirty_self_fields = i;
   }
-
 }
+
 
 /** @brief Setup the 0th index in the threads array to the current
  *         running thread, zero other elements of thread array,
@@ -246,11 +246,11 @@ int thread_create(task_t *new_task) {
         CHAN_OUT1(thread_state_t, threads[new_thr_slot], new_thread,
             THREAD_ARRAY_CH);
         curr_free_index++;
-    return 0;
+        return 0;
     }
-
     return -1;
 }
+
 
 void deschedule() {
     task_t *curr_task = curctx->task;
@@ -265,7 +265,7 @@ void deschedule() {
 /** Whether an interrupt routine is running - if unset, _init should
  *  enable interrupts?
  */
-static __nv uint8_t interrupt_active;
+__nv uint8_t interrupt_active = 0;
 
 void enable_interrupts() {
     // TODO enable interrupt for specific device & clear int_flag
@@ -296,20 +296,25 @@ void _interrupt_setup() {
     // TODO Both operations need to happen at same time:
     //      if interrupt context && ~interrupt_active, ints could be reentrant
     //      if !int_context && int_active, interrupt would never fire again
-    // FIX: Interrupts disabled by default on MSP430
+    // FIX: Interrupts disabled by default on MSP430, still an issue!!!!
 
     // Set current context to user ISR (if possible)
     curctx->task = TASK_REF(interrupt_task);
-    // Set _init to disable interrupts before branching
+    // Set _init to keep interrupts disabled
     interrupt_active = 1;
-
-    // Clear stack
+    // Clear stack of PC and SR
+    __asm__ volatile ( // volatile because output operands unused by C
+        "adda #4h, sp\n"
+        : /* no outputs */
+        : /* no inputs */
+        : "sp"
+        : /* no goto labels */
+    );
     /* Clear the interrupt stack - if a power failure
      * occurs, the stack will be cleared - decrementing
      * after power failure could cause an error.
      * We decrement at the start and set a flag if the
      * operation has completed. */
-    // SP += 8 // pop PC and SR off stack
 }
 
 
