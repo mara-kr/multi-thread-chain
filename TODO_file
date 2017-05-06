@@ -1,28 +1,14 @@
-List of TODO's for Milestone 0:
-
--Infra: submodules working, update submodule libchain
-
--Define Scheduler "reach"
-	What exactly will the scheduler task be responsible for?
-
--Nail down exactly what is defined at compile time
-	So far, programmer specifies which sequences of tasks can be run concurrently and the
-	maximum number of concurrent instances, so channels can be statically allocated at
-	compile time.
-
--Easy follow up to last TODO is to write a script that handles the channel definitions, or use REPEAT macro
-
--Add thread number field to context variable so tasks know which channels to read
- from/write to.
-
--Add scheduler task and show that multicast In functionality works, then hand control to
- the transitionTo() argument task as per usual.
-
-Long term TODO's:
-
--Figure out synchronization primitives
--Make tasks deschedule themselves from scheduler queue
--Get tasks to wait until "feeder" tasks have provided reasonable output.
-
-
-
+-#define for first interrupt task i.e. INTERRUPT_TASK()
+-Interrupt task should call custom function prologue that saves
+  int flag
+-Add return from interrupt function
+-TRANSITION_TO checks for the interrupt flag set in curctx, sets int flag in
+    next task if set in current task
+-IRET: like transition_to, but unsets interrupt flag in next task
+-ISSUE: Transition_to picks next task up in threads[] - probably shouldn't  if
+        inside interrupt handler
+-Shouldn't need to store interrupt task information in threads[], current should
+ stay the same (so that upon IRET, we return to the same location)
+    (although, certianly easier to do so)
+-Scheduler_task modifications - by default it'll schedule the thread after
+ the one that was running after an IRET transition
