@@ -18,11 +18,6 @@ typedef struct thread_t {
     context_t context;
 } thread_t;
 
-__nv extern thread_t * volatile cur_thread;
-
-//extern SELF_CHANNEL_DEC(scheduler_task,thread_array);
-//extern struct _ch_type_scheduler_task_scheduler_task_thread_array
-//							_ch_scheduler_task_scheduler_task;
 
 #define THREAD_CREATE(task) thread_create(TASK_REF(task))
 
@@ -58,12 +53,19 @@ void transition_to_mt(task_t *next_task);
 /** @brief returns a pointer to the current thread */
 uint8_t getThreadPtr();
 
-/** @brief Enable interrupts on the msp430 */
-void enable_interrupts();
+
+/******************************************
+ * Interrupt handling functions & defs
+ * ****************************************/
+
+/** @brief Enable interrupts if we aren't in an interrupt handler
+ *         otherwise, do nothing. */
+void enable_interrupts()
+
+/** Set if task to jump to is in an interrupt handler */
+#define TASK_FUNC_INT_FLAG 0x0001U
 
 void _interrupt_setup();
-void return_from_interrupt();
-
 
 /** @brief Designate function to run on interrupt firing on Port 1 */
 #define INTERRUPT_TASK(func) \
@@ -72,6 +74,6 @@ void return_from_interrupt();
         func();\
     }
 
+void return_from_interrupt();
 #define IRET return_from_interrupt();
-
 #endif

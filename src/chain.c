@@ -343,14 +343,11 @@ extern __nv uint8_t interrupt_active;
 /** @brief Entry point upon reboot */
 int main() {
 
+    curr_free_index = 0;
+
     _init();
     _numBoots++;
 
-    curr_free_index = 0;
-    // TODO - assumes NV is initialized to zero
-    if (!interrupt_active) { // Enable interrupts if no interupt active
-        __bis_SR_register(GIE);
-    }
     // Resume execution at the last task that started but did not finish
 
     // TODO: using the raw transtion would be possible once the
@@ -359,12 +356,15 @@ int main() {
     // transition_to(curtask);
 
     task_prologue();
-    //LIBCHAIN_PRINTF("Finished prologue checking task |  %x | \r\n", curctx->task->func);
+    void *curr_task = (void *)
+        ((unsigned) curr->task->func & ~TASK_FUNC_INIT_FLAG);
+    //LIBCHAIN_PRINTF("Finished prologue checking task |  %x | \r\n",
+    //  curctx->task->func);
 
     __asm__ volatile ( // volatile because output operands unused by C
         "br %[nt]\n"
         : /* no outputs */
-        : [nt] "r" (curctx->task->func)
+        : [nt] "r" (curr_task_addr)
     );
 
     return 0; // TODO: write our own entry point and get rid of this

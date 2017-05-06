@@ -89,7 +89,7 @@ void scheduler_task() {
             indicies_size++;
         }
     }
-    curr_free_index = 0;
+
     // Write the size of the indicies array
     CHAN_OUT1(unsigned, size, indicies_size, INDICIES_CH);
     // Zero the current free index since we just wrote the scheduler array
@@ -212,7 +212,6 @@ void thread_init() {
     //Set the current thread to index 0
     set_current(0);
     swap_scheduler_buffer();
-
 }
 
 
@@ -237,7 +236,6 @@ int thread_create(task_t *new_task) {
     LIBCHAIN_PRINTF("new_thr_slot = %u , curr_free= %u\r\n",
             new_thr_slot, curr_free_index);
     if (curr_free_index < indicies_size) {
-
         new_thread.thread.context.task = new_task;
         // TODO Set to creation time instead of 0?
         new_thread.thread.context.time = 0;
@@ -256,6 +254,19 @@ void deschedule() {
     task_t *curr_task = curctx->task;
     transition_to_mt(curr_task);
 }
+
+
+/***********************************************************
+ * Interrupt handling code
+ * *********************************************************/
+
+void enable_interrupts() {
+    unsigned curr_task_addr = (unsigned) curctx->task->func;
+    if (!(curr_task_addr & TASK_FUNC_INT_FLAG)) {
+        __enable_interrupt();
+    }
+}
+
 
 /***********************************************************
  * Interrupt handling functions and variables
