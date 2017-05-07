@@ -65,15 +65,6 @@ void enable_interrupts()
 
 void _interrupt_prologue(void *func);
 
-/** Whether we need to clear the values that INT pushes on the stack.
- *  Nothing else in chain cares about this - maybe we don't? */
-__nv uint8_t _int_reboot_occurred;
-
-/** Mark of whether user space initialization for the interrupt handler
- *  is complete */
-__nv uint8_t _int_setup_complete = 0;
-
-
 /** @brief Whether execution is inside an interrupt handler */
 int in_interrupt_handler();
 
