@@ -273,6 +273,10 @@ void deschedule() {
  *  Nothing else in chain cares about this - maybe we don't? */
 __nv uint8_t _int_reboot_occurred;
 
+/** Mark of whether user space initialization for the interrupt handler
+ *  is complete */
+__nv uint8_t _int_setup_complete = 0;
+
 
 void enable_interrupts() {
     unsigned curr_task_addr = (unsigned) curctx->task->func;
@@ -290,7 +294,7 @@ void enable_interrupts() {
  */
 //      Interrupt setup deals with the case where a restart doesn't occur
 //      Ideally, on reboot, skip interrupt_setup and go to user handler
-void _interrupt_setup(void *func) {
+void _interrupt_prologue(void *func) {
     /** We need to only decrement the stack if no reboot has occurred since
      *  an interrupt fired - this is set in main() (i.e. set on reboot)
      */
@@ -309,7 +313,11 @@ void _interrupt_setup(void *func) {
 
 /** @brief Whether execution is inside an interrupt handler */
 int in_interrupt_handler() {
-    return (curctx->task->func & TASK_FUNC_INT_FLAG);
+    if (_int_setup_complete) {
+        return (curctx->task->func & TASK_FUNC_INT_FLAG);
+    } else {
+        return 0;
+    }
 }
 
 

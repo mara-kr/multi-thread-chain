@@ -66,27 +66,30 @@ void enable_interrupts()
 /** Set if task to jump to is in an interrupt handler */
 #define TASK_FUNC_INT_FLAG 0x0001U
 
-void _interrupt_setup(void *func);
+void _interrupt_prologue(void *func);
 
 /** @brief Whether execution is inside an interrupt handler */
 int in_interrupt_handler();
+
+#define INT_SETUP_COMPLETE() \
+    _int_setup_complete = 1; \
+    _enable_interrupt();
 
 /** Designate function to run on interrupt firing on Port 1 */
 /** see libedb/src/edb.c:712 */
 /** @brief Macro for user to define task to run upon an interrupt firing.
  *
- *  _interrupt_setup(func) is the precursor to receiving an interrupt.
+ *  _interrupt_prologue(func) is the precursor to receiving an interrupt.
  *  If a power failure occurs between recieving the interrupt and
- *  writing curctx->task in _interrupt_setup, the interrupt will not
+ *  writing curctx->task in _interrupt_prologue, the interrupt will not
  *  be recieved.
  */
-#define INTERRUPT_TASK(func)    \
-    _interrupt void Port_1() {  \
-        _interrupt_setup(func); \
-        func();                 \
-    }                           \
-                                \ 
-    TASK(1, func)
+#define INTERRUPT_TASK(val, func) \
+    _interrupt void Port_1() { \
+        _interrupt_prologue(func); \
+        func(); \
+    } \
+    TASK(val, func)
 
 void return_from_interrupt();
 #define IRET() return_from_interrupt();
