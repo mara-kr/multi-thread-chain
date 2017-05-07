@@ -23,7 +23,6 @@ __nv uint8_t _int_reboot_occurred;
  *  is complete */
 __nv uint8_t _int_setup_complete = 0;
 
-static inline int in_interrupt_handler();
 
 // Current index in the free indicies array
 unsigned curr_free_index;
