@@ -13,7 +13,7 @@
 #define TRANSITION_TO_MT(task) transition_to_mt(TASK_REF(task))
 
 typedef struct thread_t {
-    // TODO - overflow is possible!
+    // TODO - overflow is possible (but chain has a similar issue)
     unsigned thread_id;
     context_t context;
 } thread_t;
@@ -23,6 +23,7 @@ typedef struct thread_t {
 
 //For consistency in macro-omnipresence
 #define THREAD_END() thread_end()
+
 /** @brief Initialize the multi-threading library at first boot */
 void thread_init();
 
@@ -65,15 +66,28 @@ void enable_interrupts()
 /** Set if task to jump to is in an interrupt handler */
 #define TASK_FUNC_INT_FLAG 0x0001U
 
-void _interrupt_setup();
+void _interrupt_setup(void *func);
 
-/** @brief Designate function to run on interrupt firing on Port 1 */
-#define INTERRUPT_TASK(func) \
-    _interrupt void Port_1() { \
-        _interrupt_setup(); \
-        func();\
-    }
+/** @brief Whether execution is inside an interrupt handler */
+int in_interrupt_handler();
+
+/** Designate function to run on interrupt firing on Port 1 */
+/** see libedb/src/edb.c:712 */
+/** @brief Macro for user to define task to run upon an interrupt firing.
+ *
+ *  _interrupt_setup(func) is the precursor to receiving an interrupt.
+ *  If a power failure occurs between recieving the interrupt and
+ *  writing curctx->task in _interrupt_setup, the interrupt will not
+ *  be recieved.
+ */
+#define INTERRUPT_TASK(func)    \
+    _interrupt void Port_1() {  \
+        _interrupt_setup(func); \
+        func();                 \
+    }                           \
+                                \ 
+    TASK(1, func)
 
 void return_from_interrupt();
-#define IRET return_from_interrupt();
+#define IRET() return_from_interrupt();
 #endif

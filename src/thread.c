@@ -15,6 +15,7 @@
 #include "chain.h"
 #include "thread.h"
 
+static inline int in_interrupt_handler();
 
 // Current index in the free indicies array
 unsigned curr_free_index;
@@ -121,26 +122,33 @@ void scheduler_task() {
 
 
 // Transition to the next task in the current thread
+// TODO: Bug exists if we die between writing to threads[] and
+// getting to scheduler task - there'll be a mismatch between curctx
+// and threads[current]
 void transition_to_mt(task_t *next_task){
     LIBCHAIN_PRINTF("transition_to_mt \r\n");
+    context_t next_ctx;
     thread_t next_thr;
     thread_state_t next_thr_state;
-    context_t next_ctx;
+    // If we're in an interrupt, don't run the scheduler and keep status flag
+    if (in_interrupt_handler()) {
+        next_task->func |= TASK_FUNC_INT_FLAG;
+        transition_to(next_task);
+    }
+
+    // Not in interrupt, keep flag clear
+    next_task = next_task & ~TASK_FUNC_INT_FLAG;
+    next_ctx = { .task = next_task, .time = curctx->time + 1};
     unsigned current = get_current();
     LIBCHAIN_PRINTF("Current = %u \r\n", current);
 
-    next_ctx.task = next_task;
-    next_ctx.time = curctx->time + 1;
-    LIBCHAIN_PRINTF("transition_to_mt next task = %x \r\n",next_ctx.task);
     //Make thread_t to pass to scheduler
     thread_state_t curr_thr = *CHAN_IN1(thread_state_t, threads[current],
             THREAD_ARRAY_CH);
-    next_thr.thread_id = curr_thr.thread.thread_id;
-    next_thr.context = next_ctx;
+    next_thr = { .thread_id = curr_thr.thread.thread_id, .context = next_ctx};
 
     //Write thread out to scheduler
-    next_thr_state.thread = next_thr;
-    next_thr_state.active = 1; // Hasn't called thread_end, still active
+    next_thr_state = {.thread = next_thr, .active = 1}
 
     //Update context passed in
     CHAN_OUT1(thread_state_t, threads[current], next_thr_state,
@@ -257,8 +265,14 @@ void deschedule() {
 
 
 /***********************************************************
- * Interrupt handling code
- * *********************************************************/
+ * Interrupt handling functions and variables
+ * NOTE: Assumes that device resets to interrupts disabled
+ ***********************************************************/
+
+/** Whether we need to clear the values that INT pushes on the stack.
+ *  Nothing else in chain cares about this - maybe we don't? */
+__nv uint8_t _int_reboot_occurred;
+
 
 void enable_interrupts() {
     unsigned curr_task_addr = (unsigned) curctx->task->func;
@@ -268,70 +282,63 @@ void enable_interrupts() {
 }
 
 
-/***********************************************************
- * Interrupt handling functions and variables
- * NOTE: Assumes that device resets to interrupts disabled
- ***********************************************************/
-
-/** Whether an interrupt routine is running - if unset, _init should
- *  enable interrupts?
+/** @brief Make it so that reboots restart the interrupt task
+ *  Runs before user defined interrupt handler
+ *
+ *  NOTE: Stack decrement isn't idempotent - should only be
+ *        run if no reboot has occurred
  */
-__nv uint8_t interrupt_active = 0;
+//      Interrupt setup deals with the case where a restart doesn't occur
+//      Ideally, on reboot, skip interrupt_setup and go to user handler
+void _interrupt_setup(void *func) {
+    /** We need to only decrement the stack if no reboot has occurred since
+     *  an interrupt fired - this is set in main() (i.e. set on reboot)
+     */
+    _int_reboot_occurred = 0;
 
-void enable_interrupts() {
-    // TODO enable interrupt for specific device & clear int_flag
-    //P1IE |= BIT3; // P1.3 interrupt enabled
-    //P1IFG &= ~BIT3; // P1.3 interrupt flag cleared
-    __bis_SR_register(GIE);
+    /** We need to set the interrupt function and status flag at
+     *  the same time. If one occurs without the other, on reboot,
+     *  we'll either be stuck in the interrupt handler with interrupts
+     *  enabled or outside the interrupt handler with interrupts enabled.
+     */
+    task_t *int_task = TASK_REF(func);
+    int_task->func |= TASK_FUNC_INT_FLAG;
+    curctx->task = int_task;
 }
 
 
-// Should be user-defined (TODO, better way?)
-void interrupt_task();
-TASK(interrupt_task, 7)
-
-/** @brief Make it so that reboots restart the interrupt task
- *
- *  Runs before user defined interrupt handler
- *  NOTE: Stack decrement isn't idempotent - should only be
- *        run if no reboot has occured
- */
-// TODO If power fails during interrupt, stack clears, need to
-//      only run function once
-// TODO Need to store some bit that says to go to the ISR in _init
-//      set in _interrupt_setup(), cleared in ISR
-//
-//      Ideally, on reboot, skip _interrup_setup and go to user handler
-//      Interrupt setup deals with the case where a restart doesn't occur
-void _interrupt_setup() {
-    // TODO Both operations need to happen at same time:
-    //      if interrupt context && ~interrupt_active, ints could be reentrant
-    //      if !int_context && int_active, interrupt would never fire again
-    // FIX: Interrupts disabled by default on MSP430, still an issue!!!!
-
-    // Set current context to user ISR (if possible)
-    curctx->task = TASK_REF(interrupt_task);
-    // Set _init to keep interrupts disabled
-    interrupt_active = 1;
-    // Clear stack of PC and SR
-    __asm__ volatile ( // volatile because output operands unused by C
-        "adda #4h, sp\n"
-        : /* no outputs */
-        : /* no inputs */
-        : "sp"
-        : /* no goto labels */
-    );
-    /* Clear the interrupt stack - if a power failure
-     * occurs, the stack will be cleared - decrementing
-     * after power failure could cause an error.
-     * We decrement at the start and set a flag if the
-     * operation has completed. */
+/** @brief Whether execution is inside an interrupt handler */
+int in_interrupt_handler() {
+    return (curctx->task->func & TASK_FUNC_INT_FLAG);
 }
 
 
 void return_from_interrupt() {
-    __bis_SR_register(GIE); // re-enable interrupts
-    transition_to_mt(scheduler_task); // TODO - transition to old current?
+    // Return back to the interrupted task
+    unsigned current = get_current();
+    thread_state_t old_thr = *CHAN_IN1(thread_state_t, threads[current],
+            THREAD_ARRAY_CH);
+    task_t old_task = old_thr->thread->context->task;
+
+    // Clear stack of PC and SR if we haven't cleared stack due to reboot
+    if (!_int_reboot_occurred) {
+        __asm__ volatile ( // volatile because output operands unused by C
+            "adda #4h, sp\n"
+            : /* no outputs */
+            : /* no inputs */
+            : "sp"
+            : /* no goto labels */
+        );
+    }
+    __enable_interrupt();
+    /* Transition_to modifies curctx update idempotently,
+     * if we reboot in transition_to, we'll restart with interrupts
+     * disbled and the interrupt flag set in curctx.
+     *
+     * Avoid transition_to_mt for a slight optimization - we know where
+     * we're going.
+     */
+    transition_to(old_task);
 }
 
 /***********************************************************

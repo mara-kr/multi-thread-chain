@@ -137,7 +137,7 @@ void transition_to(task_t *next_task)
         "mov #0x2400, r1\n"
         "br %[ntask]\n"
         :
-        : [ntask] "r" (next_task->func)
+        : [ntask] "r" (next_task->func & ~(TASK_FUNC_INT_FLAG))
     );
 
     // Alternative:
@@ -347,6 +347,7 @@ int main() {
 
     _init();
     _numBoots++;
+    _int_reboot_occurred = 1;
 
     // Resume execution at the last task that started but did not finish
 
@@ -357,7 +358,7 @@ int main() {
 
     task_prologue();
     void *curr_task = (void *)
-        ((unsigned) curr->task->func & ~TASK_FUNC_INIT_FLAG);
+        ((unsigned) curctx->task->func & ~TASK_FUNC_INIT_FLAG);
     //LIBCHAIN_PRINTF("Finished prologue checking task |  %x | \r\n",
     //  curctx->task->func);
 
