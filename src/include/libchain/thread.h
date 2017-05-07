@@ -75,8 +75,7 @@ int in_interrupt_handler();
     _int_setup_complete = 1; \
     _enable_interrupt();
 
-/** Designate function to run on interrupt firing on Port 1 */
-/** see libedb/src/edb.c:712 */
+/** Designate function to run on interrupt firing on Timer0_AO */
 /** @brief Macro for user to define task to run upon an interrupt firing.
  *
  *  _interrupt_prologue(func) is the precursor to receiving an interrupt.
@@ -84,12 +83,24 @@ int in_interrupt_handler();
  *  writing curctx->task in _interrupt_prologue, the interrupt will not
  *  be recieved.
  */
+#if defined(__TI_COMPILER_VERSION__) || defined(__IAR_SYSTEMS_ICC)
+#pragma vector = TIMER0_A0_VECTOR
 #define INTERRUPT_TASK(val, func) \
-    _interrupt void Port_1() { \
+    _interrupt void Timer0_A0_ISR(void) { \
         _interrupt_prologue(func); \
         func(); \
     } \
     TASK(val, func)
+#elif defined(__GNUC__)
+#define INTERRUPT_TASK(val, func) \
+void __attribute__ ((interrupt(TIMER0_A0_VECTOR))) Timer0_A0_ISR (void) { \
+        _interrupt_prologue(func); \
+        func(); \
+    } \
+    TASK(val, func)
+#else
+#error Compiler not supported
+#endif
 
 void return_from_interrupt();
 #define IRET() return_from_interrupt();
