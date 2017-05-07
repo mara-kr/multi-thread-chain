@@ -320,6 +320,10 @@ void return_from_interrupt() {
             THREAD_ARRAY_CH);
     task_t old_task = old_thr->thread->context->task;
 
+    // Technically possible to call interrupted task from handler
+    // (i.e. flag could be set)
+    old_task->func &= ~(TASK_FUNC_INT_FLAG);
+
     // Clear stack of PC and SR if we haven't cleared stack due to reboot
     if (!_int_reboot_occurred) {
         __asm__ volatile ( // volatile because output operands unused by C
