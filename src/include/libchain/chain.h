@@ -429,4 +429,30 @@ void chan_out(const char *field_name, const void *value,
  *  */
 #define TRANSITION_TO(task) transition_to(TASK_REF(task))
 
+
+/******************************************
+ * Moved from chain.c to keep chain.c/.h as
+ * a strict dependency
+ *****************************************/
+__nv chain_time_t volatile curtime = 0;
+
+/* To update the context, fill-in the unused one and flip the pointer to it */
+__nv context_t context_1 = {0};
+__nv context_t context_0 = {
+    .task = TASK_REF(_entry_task),
+    .time = 0,
+    .next_ctx = &context_1,
+};
+
+__nv context_t * volatile curctx = &context_0;
+
+// for internal instrumentation purposes
+__nv volatile unsigned _numBoots = 0;
+
+// Lowest bit of task->func is set if task is inside an interrupt handler
+#define TASK_FUNC_INT_FLAG 0x0001U
+
+#define CLEAR_INT_FLAG(func) (((unsigned) (func)) & ~(TASK_FUNC_INT_FLAG))
+#define GET_INT_FLAG(func) (((unsigned) (func)) & (TASK_FUNC_INT_FLAG))
+
 #endif // CHAIN_H

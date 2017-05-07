@@ -9,23 +9,7 @@
 #endif
 
 #include "chain.h"
-#include "thread.h"
 
-
-__nv chain_time_t volatile curtime = 0;
-
-/* To update the context, fill-in the unused one and flip the pointer to it */
-__nv context_t context_1 = {0};
-__nv context_t context_0 = {
-    .task = TASK_REF(_entry_task),
-    .time = 0,
-    .next_ctx = &context_1,
-};
-
-__nv context_t * volatile curctx = &context_0;
-
-// for internal instrumentation purposes
-__nv volatile unsigned _numBoots = 0;
 
 /**
  * @brief Function to be invoked at the beginning of every task
@@ -133,11 +117,12 @@ void transition_to(task_t *next_task)
 
     task_prologue();
 
+    // Mask off lowest bit - can't jump to unaligned addresses
     __asm__ volatile ( // volatile because output operands unused by C
         "mov #0x2400, r1\n"
         "br %[ntask]\n"
         :
-        : [ntask] "r" (next_task->func & ~(TASK_FUNC_INT_FLAG))
+        : [ntask] "r" (CLEAR_INT_FLAG(next_task->func))
     );
 
     // Alternative:
@@ -334,39 +319,4 @@ void chan_out(const char *field_name, const void *value,
     }
 
     va_end(ap);
-}
-
-// Defined in thread.c
-extern unsigned curr_free_index;
-extern __nv uint8_t interrupt_active;
-
-/** @brief Entry point upon reboot */
-int main() {
-
-    curr_free_index = 0;
-
-    _init();
-    _numBoots++;
-    _int_reboot_occurred = 1;
-
-    // Resume execution at the last task that started but did not finish
-
-    // TODO: using the raw transtion would be possible once the
-    //       prologue discussed in chain.h is implemented (requires compiler
-    //       support)
-    // transition_to(curtask);
-
-    task_prologue();
-    void *curr_task = (void *)
-        ((unsigned) curctx->task->func & ~TASK_FUNC_INIT_FLAG);
-    //LIBCHAIN_PRINTF("Finished prologue checking task |  %x | \r\n",
-    //  curctx->task->func);
-
-    __asm__ volatile ( // volatile because output operands unused by C
-        "br %[nt]\n"
-        : /* no outputs */
-        : [nt] "r" (curr_task_addr)
-    );
-
-    return 0; // TODO: write our own entry point and get rid of this
 }

@@ -63,10 +63,16 @@ uint8_t getThreadPtr();
  *         otherwise, do nothing. */
 void enable_interrupts()
 
-/** Set if task to jump to is in an interrupt handler */
-#define TASK_FUNC_INT_FLAG 0x0001U
-
 void _interrupt_prologue(void *func);
+
+/** Whether we need to clear the values that INT pushes on the stack.
+ *  Nothing else in chain cares about this - maybe we don't? */
+__nv uint8_t _int_reboot_occurred;
+
+/** Mark of whether user space initialization for the interrupt handler
+ *  is complete */
+__nv uint8_t _int_setup_complete = 0;
+
 
 /** @brief Whether execution is inside an interrupt handler */
 int in_interrupt_handler();
@@ -104,4 +110,5 @@ void __attribute__ ((interrupt(TIMER0_A0_VECTOR))) Timer0_A0_ISR (void) { \
 
 void return_from_interrupt();
 #define IRET() return_from_interrupt();
+
 #endif

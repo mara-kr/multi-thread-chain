@@ -137,7 +137,7 @@ void transition_to_mt(task_t *next_task){
     }
 
     // Not in interrupt, keep flag clear
-    next_task = next_task & ~TASK_FUNC_INT_FLAG;
+    next_task->func = CLEAR_INT_FLAG(next_task->func);
     next_ctx = { .task = next_task, .time = curctx->time + 1};
     unsigned current = get_current();
     LIBCHAIN_PRINTF("Current = %u \r\n", current);
@@ -263,24 +263,46 @@ void deschedule() {
     transition_to_mt(curr_task);
 }
 
+/** @brief Entry point upon reboot - moved from chain.c so that
+ *         chain can be kept as a strict dependency (and doesn't
+ *         use anything in thread.c/.h)
+ */
+int main() {
+
+    curr_free_index = 0;
+
+    _init();
+    _numBoots++;
+    _int_reboot_occurred = 1;
+
+    // Resume execution at the last task that started but did not finish
+
+    // TODO: using the raw transtion would be possible once the
+    //       prologue discussed in chain.h is implemented (requires compiler
+    //       support)
+    // transition_to(curtask);
+
+    task_prologue();
+    //LIBCHAIN_PRINTF("Finished prologue checking task |  %x | \r\n",
+    //  curctx->task->func);
+
+    __asm__ volatile ( // volatile because output operands unused by C
+        "br %[nt]\n"
+        : /* no outputs */
+        : [nt] "r" (CLEAR_INT_FLAG(curctx->task->func))
+    );
+
+    return 0; // TODO: write our own entry point and get rid of this
+}
 
 /***********************************************************
  * Interrupt handling functions and variables
  * NOTE: Assumes that device resets to interrupts disabled
  ***********************************************************/
 
-/** Whether we need to clear the values that INT pushes on the stack.
- *  Nothing else in chain cares about this - maybe we don't? */
-__nv uint8_t _int_reboot_occurred;
-
-/** Mark of whether user space initialization for the interrupt handler
- *  is complete */
-__nv uint8_t _int_setup_complete = 0;
-
-
 void enable_interrupts() {
     unsigned curr_task_addr = (unsigned) curctx->task->func;
-    if (!(curr_task_addr & TASK_FUNC_INT_FLAG)) {
+    if (!(GET_INT_FLAG(curctx->task->func))) {
         __enable_interrupt();
     }
 }
@@ -314,7 +336,7 @@ void _interrupt_prologue(void *func) {
 /** @brief Whether execution is inside an interrupt handler */
 int in_interrupt_handler() {
     if (_int_setup_complete) {
-        return (curctx->task->func & TASK_FUNC_INT_FLAG);
+        return GET_INT_FLAG(curctx->task->func);
     } else {
         return 0;
     }
@@ -330,7 +352,7 @@ void return_from_interrupt() {
 
     // Technically possible to call interrupted task from handler
     // (i.e. flag could be set)
-    old_task->func &= ~(TASK_FUNC_INT_FLAG);
+    old_task->func = CLEAR_INT_FLAG(old_task->func);
 
     // Clear stack of PC and SR if we haven't cleared stack due to reboot
     if (!_int_reboot_occurred) {
