@@ -172,6 +172,10 @@ extern context_t * volatile curctx;
     void func(); \
     __nv task_t TASK_SYM_NAME(func) = { func, (1UL << idx), idx, {0}, 0, 0, #func }; \
 
+#define TASK_EXT(idx, func) \
+    void func(); \
+    __nv task_t TASK_SYM_NAME(func) = { func, (3UL << idx), idx, {0}, 0, 0, #func }; \
+
 #define TASK_REF(func) &TASK_SYM_NAME(func)
 
 /** @brief Function called on every reboot
