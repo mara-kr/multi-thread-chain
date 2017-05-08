@@ -145,17 +145,20 @@ void transition_to_mt(task_t *next_task){
 
     // Not in interrupt, keep flag clear
     next_task->func = CLEAR_INT_FLAG(next_task->func);
-    next_ctx = { .task = next_task, .time = curctx->time + 1};
+    next_ctx.task = next_task;
+    next_ctx.time = curctx->time + 1;
     unsigned current = get_current();
     LIBCHAIN_PRINTF("Current = %u \r\n", current);
 
     //Make thread_t to pass to scheduler
     thread_state_t curr_thr = *CHAN_IN1(thread_state_t, threads[current],
             THREAD_ARRAY_CH);
-    next_thr = { .thread_id = curr_thr.thread.thread_id, .context = next_ctx};
+    next_thr.thread_id = curr_thr.thread.thread_id;
+    next_thr.context = next_ctx;
 
     //Write thread out to scheduler
-    next_thr_state = {.thread = next_thr, .active = 1}
+    next_thr_state.thread = next_thr;
+    next_thr_state.active = 1;
 
     //Update context passed in
     CHAN_OUT1(thread_state_t, threads[current], next_thr_state,
