@@ -9,6 +9,22 @@
 #endif
 
 #include "chain.h"
+#include "thread.h"
+
+__nv chain_time_t volatile curtime = 0;
+
+/* To update the context, fill-in the unused one and flip the pointer to it */
+__nv context_t context_1 = {0};
+__nv context_t context_0 = {
+    .task = TASK_REF(_entry_task),
+    .time = 0,
+    .next_ctx = &context_1,
+};
+
+__nv context_t * volatile curctx = &context_0;
+
+// for internal instrumentation purposes
+__nv volatile unsigned _numBoots = 0;
 
 
 /**
@@ -319,4 +335,37 @@ void chan_out(const char *field_name, const void *value,
     }
 
     va_end(ap);
+}
+
+
+/** @brief Entry point upon reboot - moved from chain.c so that
+ *         chain can be kept as a strict dependency (and doesn't
+ *         use anything in thread.c/.h)
+ */
+int main() {
+
+    curr_free_index = 0;
+
+    _init();
+    _numBoots++;
+    _int_reboot_occurred = 1;
+
+    // Resume execution at the last task that started but did not finish
+
+    // TODO: using the raw transtion would be possible once the
+    //       prologue discussed in chain.h is implemented (requires compiler
+    //       support)
+    // transition_to(curtask);
+
+    task_prologue();
+    //LIBCHAIN_PRINTF("Finished prologue checking task |  %x | \r\n",
+    //  curctx->task->func);
+
+    __asm__ volatile ( // volatile because output operands unused by C
+        "br %[nt]\n"
+        : /* no outputs */
+        : [nt] "r" (CLEAR_INT_FLAG(curctx->task->func))
+    );
+
+    return 0; // TODO: write our own entry point and get rid of this
 }

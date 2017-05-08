@@ -59,18 +59,33 @@ uint8_t getThreadPtr();
  * Interrupt handling functions & defs
  * ****************************************/
 
+extern unsigned curr_free_index;
+extern uint8_t _int_reboot_occurred;
+
+//#define __enable_interrupt() __bis_SR_register(GIE)
+
+// Lowest bit of task->func is set if task is inside an interrupt handler
+#define TASK_FUNC_INT_FLAG 0x0001U
+
+#define CLEAR_INT_FLAG(func) ((void *) \
+        (((unsigned) (func)) & ~(TASK_FUNC_INT_FLAG)))
+#define GET_INT_FLAG(func) (((unsigned) (func)) & (TASK_FUNC_INT_FLAG))
+#define SET_INT_FLAG(func) ((void *) \
+        (((unsigned) (func)) | (TASK_FUNC_INT_FLAG)))
+
+
 /** @brief Enable interrupts if we aren't in an interrupt handler
  *         otherwise, do nothing. */
-void enable_interrupts()
+void enable_interrupts();
 
-void _interrupt_prologue(void *func);
+void _interrupt_prologue(task_t *int_task);
 
 /** @brief Whether execution is inside an interrupt handler */
 int in_interrupt_handler();
 
-#define INT_SETUP_COMPLETE() \
-    _int_setup_complete = 1; \
-    _enable_interrupt();
+/** @brief Call when user-mode setups for interrupts is complete */
+#define INT_SETUP_COMPLETE() int_setup_complete()
+void int_setup_complete();
 
 /** Designate function to run on interrupt firing on Timer0_AO */
 /** @brief Macro for user to define task to run upon an interrupt firing.
@@ -81,11 +96,12 @@ int in_interrupt_handler();
  *  be recieved.
  */
 #define INTERRUPT_TASK(val, func) \
-__attribute__((interrupt(TIMER0_A0_VECTOR))) void Timer0_A0_ISR (void) { \
-        _interrupt_prologue(func); \
+    TASK(val, func) \
+    __attribute__((interrupt(TIMER0_A0_VECTOR))) void Timer0_A0_ISR (void) { \
+        _interrupt_prologue(TASK_REF(func)); \
         func(); \
-    } \
-    TASK(val, func)
+    }
+
 void return_from_interrupt();
 #define IRET() return_from_interrupt();
 
